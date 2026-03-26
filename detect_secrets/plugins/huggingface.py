@@ -12,7 +12,7 @@ class HuggingFaceTokenDetector(RegexBasedDetector):
 
     def verify(self, secret: str):
         try:
-            from detect_secrets.core.constants import VerifiedResult
+            from detect_secrets.constants import VerifiedResult
             import requests
             resp = requests.get(
                 'https://huggingface.co/api/whoami-v2',

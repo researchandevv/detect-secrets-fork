@@ -1,3 +1,5 @@
+"""NOTE: This is a utility module, not a plugin detector.
+It has no BasePlugin subclass and is not loaded by the plugin discovery system."""
 import re
 
 KNOWN_FAKE_SECRETS = {

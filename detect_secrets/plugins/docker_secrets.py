@@ -11,5 +11,5 @@ class DockerRegistryTokenDetector(RegexBasedDetector):
         # Docker config auth (base64 encoded user:pass)
         re.compile(r'"auth"\s*:\s*"[A-Za-z0-9+/=]{20,}"'),
         # Docker login password in scripts
-        re.compile(r'docker\s+login\s+.*?(?:-p|--password)\s+["\']?([^\s"\']+)'),
+        re.compile(r'docker\s+login\s+.*?(?:-p|--password)\s+["\']?(?:[^\s"\']+)'),
     ]

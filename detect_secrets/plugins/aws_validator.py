@@ -21,18 +21,18 @@ class AWSActiveValidator(RegexBasedDetector):
         # Import here to avoid dependency when not verifying
         try:
             import requests
-            from detect_secrets.core.constants import VerifiedResult
+            from detect_secrets.constants import VerifiedResult
             
             # STS GetCallerIdentity doesn't need secret key for validation
             # Just checking if the access key format is valid and not expired
             # Full validation requires the secret key which we don't have from just the access key
             
-            # For now, validate format strictly
-            if re.match(r'^AKIA[A-Z0-9]{16}$', secret):
-                return VerifiedResult.VERIFIED_TRUE  # Active key format
-            elif re.match(r'^ASIA[A-Z0-9]{16}$', secret):
-                return VerifiedResult.VERIFIED_TRUE  # Temporary session key
+            # Format check only — we can't call STS without the secret key,
+            # so a format match is UNVERIFIED (looks valid, not proven active).
+            # Only return VERIFIED_FALSE if the format is clearly wrong.
+            if re.match(r'^(AKIA|ASIA)[A-Z0-9]{16}$', secret):
+                return VerifiedResult.UNVERIFIED  # Format valid but not verified active
             else:
-                return VerifiedResult.UNVERIFIED
+                return VerifiedResult.VERIFIED_FALSE  # Invalid format
         except ImportError:
             return VerifiedResult.UNVERIFIED

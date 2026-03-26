@@ -40,6 +40,7 @@ DATABASE_URL = "postgresql://admin:SecretPass123@db.example.com:5432/prod"
 
     total_files = 0
     all_secrets = []
+    scan_failures = 0
 
     with default_settings():
         if os.path.isfile(target_path):
@@ -57,8 +58,9 @@ DATABASE_URL = "postgresql://admin:SecretPass123@db.example.com:5432/prod"
             try:
                 secrets = list(scan_file(fp))
                 all_secrets.extend([(fp, s) for s in secrets])
-            except Exception:
-                pass
+            except Exception as e:
+                scan_failures += 1
+                print(f"  [warn] Failed to scan {fp}: {e}", file=sys.stderr)
 
     if not all_secrets:
         print(f"\n✅ Clean! Scanned {total_files} files, no secrets found.")
@@ -94,6 +96,8 @@ DATABASE_URL = "postgresql://admin:SecretPass123@db.example.com:5432/prod"
 
     print(f"\n📊 Summary: {len(all_secrets)} findings in {total_files} files")
     print(f"   🔴 {len(high)} high  🟡 {len(medium)} medium  ⚪ {len(low)} low confidence")
+    if scan_failures:
+        print(f"   ⚠️  {scan_failures} file(s) failed to scan (see stderr for details)")
     print(f"   Use --min-confidence 0.5 to hide likely false positives")
 
     if example:

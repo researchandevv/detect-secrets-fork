@@ -51,23 +51,18 @@ class TestFirebaseDetector:
 
 
 class TestGitLabPatDetector:
-    def test_detect_pat(self):
+    def test_verify_method_exists(self):
+        """GitLabPatDetector exists for its verify() method; detection is handled by GitLabTokenDetector."""
         d = GitLabPatDetector()
-        assert list(d.analyze_line('f', 'GITLAB_TOKEN=glpat-xYz123AbCdEfGhIjKlMn', 1))
-
-    def test_detect_deploy_token(self):
-        d = GitLabPatDetector()
-        assert list(d.analyze_line('f', 'token = "gldt-xYz123AbCdEfGhIjKlMn"', 1))
-
-    def test_detect_runner_token(self):
-        d = GitLabPatDetector()
-        assert list(d.analyze_line('f', 'RUNNER_TOKEN=glrt-xYz123AbCdEfGhIjKlMn', 1))
+        assert hasattr(d, 'verify')
+        assert d.secret_type == 'GitLab Token'
 
 
 class TestNotionDetector:
     def test_detect_secret(self):
         d = NotionTokenDetector()
-        assert list(d.analyze_line('f', 'NOTION=secret_abcdefghijklmnopqrstuvwxyz0123456789ABCD', 1))
+        # Notion tokens are secret_ + exactly 43 alphanumeric chars (50 total)
+        assert list(d.analyze_line('f', 'NOTION=secret_aBcDeFgHiJkLmNoPqRsTuVwXyZ01234567890ABCDEF', 1))
 
     def test_detect_ntn_token(self):
         d = NotionTokenDetector()
@@ -138,3 +133,70 @@ class TestFakeCredentialFilter:
 
     def test_catches_example_text(self):
         assert is_likely_fake('this-is-an-example-key')
+
+
+class TestCloudflareNegative:
+    def test_sha1_hash_no_match(self):
+        """A bare SHA-1 hash (40 hex chars) without cloudflare context should not match."""
+        d = CloudflareApiTokenDetector()
+        assert not list(d.analyze_line('f', 'commit da39a3ee5e6b4b0d3255bfef95601890afd80709', 1))
+
+    def test_git_sha_no_match(self):
+        d = CloudflareApiTokenDetector()
+        assert not list(d.analyze_line('f', 'sha1: 2fd4e1c67a2d28fced849ee1bb76e7391b93eb12', 1))
+
+
+class TestKubernetesNegative:
+    def test_normal_yaml_config_no_match(self):
+        """Normal YAML config values should not trigger detection."""
+        d = KubernetesSecretDetector()
+        assert not list(d.analyze_line('f', 'name: my-deployment', 1))
+
+    def test_short_password_no_match(self):
+        d = KubernetesSecretDetector()
+        assert not list(d.analyze_line('f', 'password: true', 1))
+
+
+class TestTerraformNegative:
+    def test_var_reference_no_match(self):
+        """Terraform var. references should not match."""
+        d = TerraformSecretDetector()
+        assert not list(d.analyze_line('f', 'access_key = "var.aws_access_key"', 1))
+
+    def test_module_reference_no_match(self):
+        d = TerraformSecretDetector()
+        assert not list(d.analyze_line('f', 'secret_key = "module.vpc.secret_key"', 1))
+
+    def test_each_reference_no_match(self):
+        d = TerraformSecretDetector()
+        assert not list(d.analyze_line('f', 'password = "each.value.password"', 1))
+
+    def test_self_reference_no_match(self):
+        d = TerraformSecretDetector()
+        assert not list(d.analyze_line('f', 'api_key = "self.triggers.api_key"', 1))
+
+    def test_interpolation_no_match(self):
+        d = TerraformSecretDetector()
+        assert not list(d.analyze_line('f', 'access_key = "${var.aws_access_key}"', 1))
+
+
+class TestNotionNegative:
+    def test_short_secret_no_match(self):
+        """Short secret_ strings should not match (need 40+ chars after prefix)."""
+        d = NotionTokenDetector()
+        assert not list(d.analyze_line('f', 'secret_abc', 1))
+
+    def test_short_ntn_no_match(self):
+        d = NotionTokenDetector()
+        assert not list(d.analyze_line('f', 'ntn_short', 1))
+
+
+class TestEthereumNegative:
+    def test_hex_without_key_context_no_match(self):
+        """A 64-char hex string without private_key/secret context should not match."""
+        d = EthereumPrivateKeyDetector()
+        assert not list(d.analyze_line('f', 'hash = 0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab', 1))
+
+    def test_commit_hash_no_match(self):
+        d = EthereumPrivateKeyDetector()
+        assert not list(d.analyze_line('f', 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab', 1))

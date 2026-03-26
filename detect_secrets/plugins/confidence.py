@@ -1,4 +1,11 @@
 """
+Note: This module is an overlay — it is not called by the core scan engine.
+Use demo.py or import get_confidence/get_contextual_confidence directly
+for confidence-aware output.
+
+NOTE: This is a utility module, not a plugin detector.
+It has no BasePlugin subclass and is not loaded by the plugin discovery system.
+
 Confidence scoring for secret detectors.
 
 Confidence scoring system:
