@@ -57,6 +57,8 @@ DETECTOR_CONFIDENCE = {
     'AWS Bedrock Key': 0.80,             # ARN format
     'Firebase API Key': 0.75,            # AIza* — also used by other Google services
     'Private Key': 0.95,                 # PEM headers are definitive
+    'CI/CD Hardcoded Secret': 0.85,      # Hardcoded tokens in workflow files
+    'Package Registry Token': 0.80,      # Cargo/NuGet/RubyGems/Go registry tokens
 
     # Medium confidence (0.4-0.8): pattern-based but context-dependent
     'Kubernetes Secret': 0.70,           # JWT in K8s context
