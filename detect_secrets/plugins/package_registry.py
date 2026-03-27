@@ -1,5 +1,5 @@
 """
-Package Registry Token Detector — Loop 57
+Package Registry Token Detector
 
 Detects tokens for package registries beyond NPM:
 - Cargo (crates.io) tokens (cio prefix)
@@ -9,13 +9,10 @@ Detects tokens for package registries beyond NPM:
 - RubyGems API keys
 - Composer/Packagist tokens
 
-Cross-domain transfer: Each registry has a distinct token format (like GitHub's
-ghp_ prefix). From the weight profile, prefix-based patterns have TP rates of
-0.85-0.95. The Cargo "cio" prefix and RubyGems "rubygems_" prefix are similarly
-distinctive, giving high confidence without context dependency.
-
-Source: knowledge_ddia_ch4_encoding_evolution (schema evolution — new token
-formats are forward-compatible additions to the detection schema)
+Each registry has a distinct token format (like GitHub's ghp_ prefix).
+Prefix-based patterns have true positive rates of 0.85-0.95. The Cargo
+"cio" prefix and RubyGems "rubygems_" prefix are similarly distinctive,
+giving high confidence without context dependency.
 """
 import re
 

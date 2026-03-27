@@ -156,9 +156,9 @@ CONTEXT_MODIFIERS = {
 }
 
 
-# Rapid-dismiss patterns: near-zero TP probability, analogous to tp_rate=0.0 contexts.
+# Rapid-dismiss patterns: near-zero true positive probability.
 # Files matching these patterns should be skipped entirely — investigating them
-# has negative expected value (time cost > 0, information gain ≈ 0).
+# has negative expected value (time cost > 0, information gain ~ 0).
 RAPID_DISMISS_PATTERNS = [
     'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
     '.min.js', '.min.css', '.bundle.js',
@@ -169,7 +169,6 @@ RAPID_DISMISS_PATTERNS = [
 def should_rapid_dismiss(filename: str) -> bool:
     """True if file context has near-zero probability of real secrets.
 
-    Equivalent to tp_rate=0.0 rapid-dismiss patterns in triage systems.
     These are files where secret-like patterns are structural artifacts
     (integrity hashes, minified variable names, vendored code) rather
     than leaked credentials.

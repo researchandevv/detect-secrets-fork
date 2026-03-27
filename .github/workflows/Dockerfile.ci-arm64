@@ -1,0 +1,10 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY . .
+
+RUN pip install --no-cache-dir -e ".[word_list,gibberish]" && \
+    pip install --no-cache-dir pytest responses unidiff
+
+RUN pytest tests/ --tb=short -q && \
+    detect-secrets --version

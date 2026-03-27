@@ -1,5 +1,5 @@
 """
-Allowlist Management Utility — Loop 59
+Allowlist Management Utility
 
 Manages .secrets.baseline allowlists programmatically:
 - Add/remove secrets from the allowlist by hash
@@ -7,17 +7,11 @@ Manages .secrets.baseline allowlists programmatically:
 - Verify that allowlisted entries still exist in the codebase
 - Prune stale allowlist entries
 
-Cross-domain transfer: From the triage system's review marking workflow.
-In XSS triage, each finding gets explicitly marked (FALSE_POSITIVE, CONFIRMED,
-etc.) and the marks are persisted in state. Allowlisting is the same pattern:
-explicit human judgment persisted as machine-readable state. The
-verify_allowlist_entries_still_exist function is analogous to the
-CHANGED_CONTEXT re-validation rule — when code changes, previously dismissed
-findings need re-checking.
-
-Source: knowledge_partial_patch_verification (partial patches leave gaps —
+Allowlisting is explicit human judgment persisted as machine-readable state.
+The verify_allowlist_entries_still_exist function handles re-validation when
+code changes -- previously dismissed findings need re-checking because
 allowlist entries may reference code that has been refactored, making the
-allowlist stale and potentially hiding new secrets at the same location)
+allowlist stale and potentially hiding new secrets at the same location.
 """
 import json
 import os

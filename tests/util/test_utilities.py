@@ -204,6 +204,106 @@ class TestCalibrate:
 
 
 # ---------------------------------------------------------------------------
+# 3b. Scan stats — contextual confidence tiers and context impact
+# ---------------------------------------------------------------------------
+class TestScanStatsContextual:
+    """Tests for contextual confidence integration in scan_stats."""
+
+    @staticmethod
+    def _make_baseline_with_context():
+        """Baseline with secrets in context-sensitive file paths."""
+        return {
+            "version": "1.5.0",
+            "results": {
+                "src/config.py": [
+                    {"type": "AWS Access Key", "line_number": 10},
+                ],
+                "tests/test_auth.py": [
+                    {"type": "AWS Access Key", "line_number": 5},
+                ],
+                "package-lock.json": [
+                    {"type": "Hex High Entropy String", "line_number": 100},
+                ],
+                "docs/README.md": [
+                    {"type": "GitHub Token", "line_number": 20},
+                ],
+                "vendor/lib/creds.js": [
+                    {"type": "Stripe Access Key", "line_number": 3},
+                ],
+            },
+        }
+
+    def test_contextual_tiers_present_in_stats(self):
+        from detect_secrets.util.scan_stats import compute_stats
+        stats = compute_stats(baseline_dict=self._make_baseline_with_context())
+        assert 'by_contextual_tier' in stats
+        assert 'error' not in stats['by_contextual_tier']
+
+    def test_context_impact_present_in_stats(self):
+        from detect_secrets.util.scan_stats import compute_stats
+        stats = compute_stats(baseline_dict=self._make_baseline_with_context())
+        assert 'context_impact' in stats
+        impact = stats['context_impact']
+        assert 'reclassified' in impact
+        assert 'demotions' in impact
+        assert 'reclassified_pct' in impact
+        assert 'total_evaluated' in impact
+
+    def test_context_causes_reclassification(self):
+        from detect_secrets.util.scan_stats import compute_stats
+        stats = compute_stats(baseline_dict=self._make_baseline_with_context())
+        impact = stats['context_impact']
+        # Test file + vendor + docs should cause some reclassifications
+        assert impact['reclassified'] > 0
+        assert impact['demotions'] > 0
+
+    def test_contextual_tiers_differ_from_type_only(self):
+        from detect_secrets.util.scan_stats import compute_stats
+        stats = compute_stats(baseline_dict=self._make_baseline_with_context())
+        type_tiers = stats['by_confidence_tier']
+        ctx_tiers = stats['by_contextual_tier']
+        # With test files, vendor dirs, and docs, contextual should differ
+        assert type_tiers != ctx_tiers
+
+    def test_context_impact_examples_capped_at_5(self):
+        from detect_secrets.util.scan_stats import compute_stats
+        # Create baseline with many context-sensitive files
+        baseline = {"version": "1.5.0", "results": {}}
+        for i in range(10):
+            baseline["results"][f"tests/test_{i}.py"] = [
+                {"type": "AWS Access Key", "line_number": i},
+            ]
+        stats = compute_stats(baseline_dict=baseline)
+        assert len(stats['context_impact']['examples']) <= 5
+
+    def test_format_report_includes_contextual_sections(self):
+        from detect_secrets.util.scan_stats import compute_stats, format_report
+        stats = compute_stats(baseline_dict=self._make_baseline_with_context())
+        report = format_report(stats)
+        assert 'Contextual Confidence Tiers' in report
+        assert 'Context Impact' in report
+        assert 'Reclassified' in report
+
+    def test_no_context_no_reclassification(self):
+        from detect_secrets.util.scan_stats import compute_stats
+        # All secrets in plain source files — no context modifiers apply
+        # Avoid filenames containing context trigger words (auth, secret, test, etc.)
+        baseline = {
+            "version": "1.5.0",
+            "results": {
+                "src/main.py": [
+                    {"type": "AWS Access Key", "line_number": 1},
+                ],
+                "lib/handler.py": [
+                    {"type": "GitHub Token", "line_number": 5},
+                ],
+            },
+        }
+        stats = compute_stats(baseline_dict=baseline)
+        assert stats['context_impact']['reclassified'] == 0
+
+
+# ---------------------------------------------------------------------------
 # 4. Confidence rapid-dismiss
 # ---------------------------------------------------------------------------
 class TestRapidDismiss:

@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "detect-secrets-fork"
+dynamic = ["version"]
+description = "Secret scanner with confidence scoring — fork of Yelp/detect-secrets with 43 plugins and contextual confidence tiers"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Yelp, Inc.", email = "opensource@yelp.com"},
+]
+maintainers = [
+    {name = "researchandevv"},
+]
+keywords = [
+    "secret-management",
+    "pre-commit",
+    "security",
+    "entropy-checks",
+    "confidence-scoring",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development",
+    "Topic :: Security",
+    "Topic :: Utilities",
+    "Environment :: Console",
+    "Operating System :: OS Independent",
+    "Development Status :: 5 - Production/Stable",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pyyaml",
+    "requests",
+]
+
+[project.optional-dependencies]
+word_list = ["pyahocorasick"]
+gibberish = ["gibberish-detector"]
+dev = [
+    "pytest>=7.0",
+    "responses",
+    "coverage",
+    "unidiff",
+    "flake8",
+    "mypy",
+    "types-PyYAML",
+    "types-requests",
+]
+
+[project.scripts]
+detect-secrets = "detect_secrets.main:main"
+detect-secrets-hook = "detect_secrets.pre_commit_hook:main"
+
+[project.urls]
+Homepage = "https://github.com/researchandevv/detect-secrets-fork"
+Repository = "https://github.com/researchandevv/detect-secrets-fork"
+Issues = "https://github.com/researchandevv/detect-secrets-fork/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "detect_secrets.__version__.VERSION"}
+
+[tool.setuptools.packages.find]
+exclude = ["test*", "tmp*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"

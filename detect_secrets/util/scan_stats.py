@@ -1,5 +1,5 @@
 """
-Scan Statistics Utility — Loop 60
+Scan Statistics Utility
 
 Aggregates statistics from a .secrets.baseline file:
 - Total secrets by detector type
@@ -10,13 +10,8 @@ Aggregates statistics from a .secrets.baseline file:
 
 Useful for reporting, compliance dashboards, and prioritizing remediation.
 
-Cross-domain transfer: from the XSS triage export/summary pattern. The triage
-system generates markdown summaries with finding counts by category, disposition
-breakdowns, and file-level hotspot analysis. This module applies the same
-reporting pattern to secret detection baselines.
-
-Source: knowledge_ddia_ch9_consistency_consensus (total ordering — statistics
-must reflect a consistent snapshot, not a partial read of a changing baseline)
+Statistics reflect a consistent snapshot of the baseline at read time, not
+a partial read of a changing file.
 """
 import json
 from collections import Counter, defaultdict
@@ -93,6 +88,12 @@ def compute_stats(
     # Verified vs unverified
     verified_count = sum(1 for s in all_secrets if s.get('is_verified'))
 
+    # Contextual confidence tiers (file-path aware)
+    by_contextual_tier = _compute_contextual_confidence_tiers(all_secrets)
+
+    # Context impact: how many findings change tier when file context is applied
+    ctx_impact = _compute_context_impact(all_secrets)
+
     return {
         'total_secrets': total_secrets,
         'total_files': len(results),
@@ -101,6 +102,8 @@ def compute_stats(
         'top_files': top_files,
         'by_review_status': dict(by_review_status),
         'by_confidence_tier': by_confidence_tier,
+        'by_contextual_tier': by_contextual_tier,
+        'context_impact': ctx_impact,
         'verified_count': verified_count,
         'unverified_count': total_secrets - verified_count,
         'baseline_version': baseline_dict.get('version', 'unknown'),
@@ -136,6 +139,103 @@ def _compute_confidence_tiers(
     return dict(tiers)
 
 
+def _compute_contextual_confidence_tiers(
+    secrets: List[Dict[str, Any]],
+) -> Dict[str, int]:
+    """Group secrets into confidence tiers using contextual (file-aware) scoring.
+
+    Same tier thresholds as _compute_confidence_tiers, but uses
+    get_contextual_confidence which adjusts scores based on file path patterns
+    (test files, lock files, vendor dirs, etc.).
+
+    This answers the question from claim_confidence_requires_context_not_just_type:
+    does file context actually change the confidence distribution?
+    """
+    try:
+        from detect_secrets.plugins.confidence import get_contextual_confidence
+    except ImportError:
+        return {'error': 'confidence module not available'}
+
+    tiers: Counter = Counter()
+    for secret in secrets:
+        score = get_contextual_confidence(secret['type'], secret.get('filename', ''))
+        if score >= 0.8:
+            tiers['high'] += 1
+        elif score >= 0.4:
+            tiers['medium'] += 1
+        else:
+            tiers['low'] += 1
+
+    return dict(tiers)
+
+
+def _tier_for_score(score: float) -> str:
+    """Map a confidence score to its tier name."""
+    if score >= 0.8:
+        return 'high'
+    elif score >= 0.4:
+        return 'medium'
+    return 'low'
+
+
+def _compute_context_impact(
+    secrets: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Compute how many findings change confidence tier when file context is applied.
+
+    Returns:
+        reclassified: number of findings that moved to a different tier
+        demotions: findings that dropped to a lower tier (e.g., high -> medium)
+        promotions: findings that moved to a higher tier (unlikely but possible)
+        reclassified_pct: percentage of total findings reclassified
+        examples: up to 5 example reclassifications with details
+    """
+    try:
+        from detect_secrets.plugins.confidence import get_confidence, get_contextual_confidence
+    except ImportError:
+        return {'error': 'confidence module not available'}
+
+    reclassified = 0
+    demotions = 0
+    promotions = 0
+    examples: List[Dict[str, Any]] = []
+    tier_order = {'low': 0, 'medium': 1, 'high': 2}
+
+    for secret in secrets:
+        secret_type = secret['type']
+        filename = secret.get('filename', '')
+        base_score = get_confidence(secret_type)
+        ctx_score = get_contextual_confidence(secret_type, filename)
+        base_tier = _tier_for_score(base_score)
+        ctx_tier = _tier_for_score(ctx_score)
+
+        if base_tier != ctx_tier:
+            reclassified += 1
+            if tier_order[ctx_tier] < tier_order[base_tier]:
+                demotions += 1
+            else:
+                promotions += 1
+            if len(examples) < 5:
+                examples.append({
+                    'type': secret_type,
+                    'filename': filename,
+                    'base_score': base_score,
+                    'contextual_score': ctx_score,
+                    'base_tier': base_tier,
+                    'contextual_tier': ctx_tier,
+                })
+
+    total = len(secrets)
+    return {
+        'reclassified': reclassified,
+        'demotions': demotions,
+        'promotions': promotions,
+        'reclassified_pct': round(reclassified / total * 100, 1) if total > 0 else 0.0,
+        'total_evaluated': total,
+        'examples': examples,
+    }
+
+
 def format_report(stats: Dict[str, Any]) -> str:
     """Format statistics as a human-readable report."""
     lines = [
@@ -160,6 +260,26 @@ def format_report(stats: Dict[str, Any]) -> str:
         for tier in ('high', 'medium', 'low'):
             count = stats['by_confidence_tier'].get(tier, 0)
             lines.append(f'  {tier}: {count}')
+
+    # Contextual confidence tiers
+    ctx_tier = stats.get('by_contextual_tier', {})
+    if ctx_tier and 'error' not in ctx_tier:
+        lines.append('\n--- Contextual Confidence Tiers (file-path aware) ---')
+        for tier in ('high', 'medium', 'low'):
+            count = ctx_tier.get(tier, 0)
+            lines.append(f'  {tier}: {count}')
+
+    # Context impact
+    impact = stats.get('context_impact', {})
+    if impact and 'error' not in impact:
+        lines.append('\n--- Context Impact ---')
+        lines.append(f'  Reclassified: {impact["reclassified"]} / {impact["total_evaluated"]} ({impact["reclassified_pct"]}%)')
+        lines.append(f'  Demotions (high->med, med->low): {impact["demotions"]}')
+        lines.append(f'  Promotions: {impact["promotions"]}')
+        if impact.get('examples'):
+            lines.append('  Examples:')
+            for ex in impact['examples']:
+                lines.append(f'    {ex["type"]} in {ex["filename"]}: {ex["base_tier"]} -> {ex["contextual_tier"]} ({ex["base_score"]} -> {ex["contextual_score"]})')
 
     # By type
     lines.append('\n--- Secrets by Type ---')

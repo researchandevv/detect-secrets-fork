@@ -1,22 +1,19 @@
 """
-CI/CD Secret Detector — Loop 56
+CI/CD Secret Detector
 
 Detects hardcoded secrets in CI/CD pipeline configuration files:
 - GitHub Actions workflow YAML
 - GitLab CI YAML
 - Jenkinsfile / Jenkins pipeline scripts
 
-Cross-domain transfer: from XSS triage weight profiles — patterns with
-specific prefixes (like ghp_, glpat-) have high TP rates (0.95), while
-generic env-var references (${{ secrets.X }}) are expected usage, not leaks.
+Patterns with specific prefixes (like ghp_, glpat-) have high true positive
+rates, while generic env-var references (${{ secrets.X }}) are expected usage,
+not leaks.
 
 The key insight: CI config files are a privileged context. A hardcoded token
 in a workflow file is almost always a real leak because the *correct* pattern
-is to use the platform's secret store. This is analogous to the
-dangerouslySetInnerHTML pattern — when a developer bypasses the safe API,
-the TP rate jumps from near-zero to near-one.
-
-Source: knowledge_detect_secrets_ch4_ch5_loop (self-describing schema pattern)
+is to use the platform's secret store. When a developer bypasses the safe API,
+the true positive rate jumps from near-zero to near-one.
 """
 import re
 

@@ -3,8 +3,8 @@
 NOTE: This is a utility module, not a plugin detector.
 It has no BasePlugin subclass and is not loaded by the plugin discovery system.
 
-Transfers the weight profile methodology: instead of static confidence scores,
-calibrate from actual true positive / false positive rates observed in real scans.
+Instead of static confidence scores, calibrate from actual true positive /
+false positive rates observed in real scans.
 
 Usage:
     from detect_secrets.plugins.calibrate import calibrate_from_baseline

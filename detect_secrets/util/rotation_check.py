@@ -1,8 +1,8 @@
 """
-Secret Rotation Detection — Loop 58
+Secret Rotation Detection
 
 Compares two baseline files and identifies secrets that were:
-- Rotated (same location, different hash — credential was changed)
+- Rotated (same location, different hash -- credential was changed)
 - Added (new secret location)
 - Removed (secret location no longer present)
 - Unchanged (same location, same hash)
@@ -10,13 +10,9 @@ Compares two baseline files and identifies secrets that were:
 This supports rotation compliance auditing: teams can verify that secrets
 flagged in a previous scan have been rotated, and that no new secrets appeared.
 
-Cross-domain transfer from DDIA Ch5 replication concepts: comparing two baseline
-snapshots is analogous to detecting divergence between replicas. The "same location,
-different value" pattern maps to conflict detection in multi-leader replication —
-the location is the key, the secret hash is the value, and a change means the
-"replica" (credential) was updated.
-
-Source: knowledge_ddia_ch5_replication (divergence detection between snapshots)
+Comparing two baseline snapshots is analogous to divergence detection: the
+location is the key, the secret hash is the value, and a change means the
+credential was updated.
 """
 import json
 from collections import defaultdict
