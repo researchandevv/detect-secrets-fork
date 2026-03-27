@@ -17,6 +17,7 @@ from detect_secrets.plugins.terraform import TerraformSecretDetector
 from detect_secrets.plugins.aws_bedrock import AWSBedrockDetector
 from detect_secrets.plugins.hashicorp_vault import HashiCorpVaultTokenDetector
 from detect_secrets.plugins.test_credential_filter import is_likely_fake
+from detect_secrets.plugins.confidence import should_rapid_dismiss
 
 
 class TestAnthropicDetector:
@@ -262,3 +263,46 @@ class TestConnectionStringDetector:
             'mongodb+srv://user:p4$$w0rd@cluster.mongodb.net/db',
         ))
         assert results == ['p4$$w0rd']
+
+
+class TestRapidDismiss:
+    """should_rapid_dismiss: files with near-zero TP probability for secrets."""
+
+    def test_package_lock(self):
+        assert should_rapid_dismiss('package-lock.json')
+
+    def test_yarn_lock(self):
+        assert should_rapid_dismiss('yarn.lock')
+
+    def test_pnpm_lock(self):
+        assert should_rapid_dismiss('pnpm-lock.yaml')
+
+    def test_minified_js(self):
+        assert should_rapid_dismiss('dist/app.min.js')
+
+    def test_minified_css(self):
+        assert should_rapid_dismiss('assets/styles.min.css')
+
+    def test_bundle_js(self):
+        assert should_rapid_dismiss('build/main.bundle.js')
+
+    def test_node_modules(self):
+        assert should_rapid_dismiss('node_modules/pkg/index.js')
+
+    def test_yarn_cache(self):
+        assert should_rapid_dismiss('.yarn/cache/lodash-npm-4.17.21.zip')
+
+    def test_vendor_bundle(self):
+        assert should_rapid_dismiss('vendor/bundle/ruby/3.0.0/gems/rack/lib/rack.rb')
+
+    def test_normal_source_not_dismissed(self):
+        assert not should_rapid_dismiss('src/config.py')
+
+    def test_env_file_not_dismissed(self):
+        assert not should_rapid_dismiss('.env')
+
+    def test_regular_js_not_dismissed(self):
+        assert not should_rapid_dismiss('src/utils/auth.js')
+
+    def test_case_insensitive(self):
+        assert should_rapid_dismiss('Package-Lock.JSON')

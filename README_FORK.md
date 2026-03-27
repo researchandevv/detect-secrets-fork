@@ -142,6 +142,58 @@ if not result['compatible']:
 
 The stamp is stored under a `generated_by` key in the baseline JSON and does not affect any existing fields.
 
+## SARIF Output (CI Integration)
+
+Convert scan results to SARIF 2.1.0 for GitHub Code Scanning, GitLab SAST, or Azure DevOps:
+
+```python
+from detect_secrets.util.sarif_output import baseline_to_sarif_file
+baseline_to_sarif_file('.secrets.baseline', 'results.sarif')
+```
+
+Upload to GitHub Code Scanning in a workflow:
+
+```yaml
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
+```
+
+## Git History Scanning
+
+Most secret scanners only check the working tree. Secrets that were committed
+then deleted are still in git history. Trufflehog and gitleaks handle this but
+are Go tools -- detect-secrets' value is Python-native with a plugin system.
+
+`detect_secrets.util.git_history` provides lightweight history scanning that
+reuses existing plugins. No new dependencies.
+
+```python
+from detect_secrets.util.git_history import (
+    scan_deleted_files,
+    scan_recent_patches,
+    format_history_report,
+)
+
+# Scan files that were deleted from the repo
+deleted = scan_deleted_files('/path/to/repo', max_commits=100)
+
+# Scan added lines in recent patches
+patches = scan_recent_patches('/path/to/repo', max_commits=50)
+
+# Human-readable report
+print(format_history_report(deleted + patches))
+```
+
+`scan_deleted_files` retrieves content of deleted files from git history and
+runs each through the plugin pipeline. `scan_recent_patches` extracts added
+lines from commit diffs and scans them (uses `scan_diff` if `unidiff` is
+installed, otherwise falls back to manual diff parsing).
+
+This is a utility for advanced users, not a replacement for full history
+scanners. It covers the common case (secret committed then removed) without
+leaving the Python ecosystem.
+
 ## License
 
 Apache-2.0 (same as original)

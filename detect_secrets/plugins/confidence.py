@@ -28,6 +28,10 @@ detect-secrets plugin interface.
 Usage:
     from detect_secrets.plugins.confidence import get_confidence
     score = get_confidence(secret.type)
+
+See also: multi_provider.py for file-level concentration analysis — when a single
+file contains secrets from 3+ different providers, the combined false positive
+probability drops multiplicatively, making the finding high-priority.
 """
 
 # Confidence scores per detector type (0.0 = always FP, 1.0 = always real)
@@ -67,6 +71,7 @@ DETECTOR_CONFIDENCE = {
     'JSON Web Token': 0.45,              # eyJ* — many are non-secret
     'NPM tokens': 0.70,                  # npm_* prefix
     'Secret Keyword': 0.40,              # Very context-dependent
+    'Environment Variable Secret': 0.70,  # .env context is strong signal
 
     # Low confidence (<0.4): entropy-based, frequent false positives
     'Base64 High Entropy String': 0.20,  # Catches many non-secrets
@@ -130,7 +135,46 @@ CONTEXT_MODIFIERS = {
         'file_patterns': ['.md', 'README', 'CHANGELOG', 'docs/', 'doc/'],
         'modifier': -0.2,  # Docs may reference secrets but rarely contain real ones
     },
+    'generated_code': {
+        'file_patterns': ['.generated.', '.auto.', '_generated', 'generated_', 'autogen'],
+        'modifier': -0.7,  # Generated code contains machine-produced patterns, not real secrets
+    },
+    'minified': {
+        'file_patterns': ['.min.js', '.min.css', '.bundle.js', '.chunk.js'],
+        'modifier': -0.8,  # Minified assets: high-entropy tokens are variable names, not secrets
+    },
+    'lock_files': {
+        'file_patterns': ['package-lock.json', 'yarn.lock', 'Gemfile.lock', 'poetry.lock',
+                          'Pipfile.lock', 'composer.lock', 'Cargo.lock', 'pnpm-lock.yaml'],
+        'modifier': -0.9,  # Lock files contain integrity hashes, never real secrets
+    },
+    'vendor': {
+        'file_patterns': ['vendor/', 'node_modules/', 'third_party/', '.yarn/'],
+        'modifier': -0.6,  # Third-party code: secrets belong to the dependency, not the project
+    },
 }
+
+
+# Rapid-dismiss patterns: near-zero TP probability, analogous to tp_rate=0.0 contexts.
+# Files matching these patterns should be skipped entirely — investigating them
+# has negative expected value (time cost > 0, information gain ≈ 0).
+RAPID_DISMISS_PATTERNS = [
+    'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
+    '.min.js', '.min.css', '.bundle.js',
+    'node_modules/', '.yarn/', 'vendor/bundle/',
+]
+
+
+def should_rapid_dismiss(filename: str) -> bool:
+    """True if file context has near-zero probability of real secrets.
+
+    Equivalent to tp_rate=0.0 rapid-dismiss patterns in triage systems.
+    These are files where secret-like patterns are structural artifacts
+    (integrity hashes, minified variable names, vendored code) rather
+    than leaked credentials.
+    """
+    fl = filename.lower()
+    return any(p in fl for p in RAPID_DISMISS_PATTERNS)
 
 
 def get_contextual_confidence(secret_type: str, filename: str) -> float:
