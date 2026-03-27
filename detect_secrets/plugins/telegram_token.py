@@ -12,6 +12,7 @@ from detect_secrets.plugins.base import RegexBasedDetector
 class TelegramBotTokenDetector(RegexBasedDetector):
     """Scans for Telegram bot tokens."""
     secret_type = 'Telegram Bot Token'
+    confidence = 0.85  # numeric_id:alphanumeric format is distinctive
 
     denylist = [
         # refs https://core.telegram.org/bots/api#authorizing-your-bot

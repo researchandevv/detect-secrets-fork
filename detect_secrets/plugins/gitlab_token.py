@@ -10,6 +10,7 @@ class GitLabTokenDetector(RegexBasedDetector):
     """Scans for GitLab tokens with optional verification."""
 
     secret_type = 'GitLab Token'
+    confidence = 0.90  # glpat-/gldt-/glrt- prefixes are unique to GitLab
 
     denylist = [
         # ref:

@@ -9,6 +9,7 @@ from detect_secrets.plugins.base import RegexBasedDetector
 class GitHubTokenDetector(RegexBasedDetector):
     """Scans for GitHub tokens."""
     secret_type = 'GitHub Token'
+    confidence = 0.95  # ghp_/gho_/ghu_/ghs_/ghr_ prefixes are unique to GitHub
 
     denylist = [
         # ref. https://github.blog/2021-04-05-behind-githubs-new-authentication-token-formats/

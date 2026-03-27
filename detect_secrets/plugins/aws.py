@@ -21,6 +21,7 @@ from .base import RegexBasedDetector
 class AWSKeyDetector(RegexBasedDetector):
     """Scans for AWS keys."""
     secret_type = 'AWS Access Key'
+    confidence = 0.80  # AKIA/ASIA prefixes are highly specific to AWS
 
     secret_keyword = r'(?:key|pwd|pw|password|pass|token)'
 

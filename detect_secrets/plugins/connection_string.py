@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import re
+from typing import Generator
 
 from .base import RegexBasedDetector
 
@@ -39,10 +42,10 @@ class ConnectionStringDetector(RegexBasedDetector):
     Filters out template placeholders (${VAR}, <password>, %s, etc.).
     """
 
-    secret_type = 'Connection String Secret'
-    confidence = 0.75
+    secret_type: str = 'Connection String Secret'
+    confidence: float = 0.75
 
-    denylist = [
+    denylist: list[re.Pattern[str]] = [
         # Database/service URIs with embedded credentials
         # Capture group 1 = the password portion for secret extraction
         re.compile(
@@ -51,7 +54,7 @@ class ConnectionStringDetector(RegexBasedDetector):
         ),
     ]
 
-    def analyze_string(self, string, **kwargs):
+    def analyze_string(self, string: str, **kwargs: object) -> Generator[str, None, None]:
         for match in super().analyze_string(string, **kwargs):
             # Filter out placeholder/template passwords
             if _PLACEHOLDER_RE.match(match):

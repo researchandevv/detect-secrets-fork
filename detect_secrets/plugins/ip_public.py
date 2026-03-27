@@ -18,6 +18,7 @@ class IPPublicDetector(RegexBasedDetector):
     https://en.wikipedia.org/wiki/Private_network
     """
     secret_type = 'Public IP (ipv4)'
+    confidence = 0.10  # IPs are rarely secrets; informational only
 
     denylist_ipv4_address = r"""
         (?<![\w.])         # Negative lookbehind: Ensures no preceding word character or dot

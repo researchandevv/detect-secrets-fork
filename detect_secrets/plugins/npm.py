@@ -9,6 +9,7 @@ from detect_secrets.plugins.base import RegexBasedDetector
 class NpmDetector(RegexBasedDetector):
     """Scans for NPM tokens."""
     secret_type = 'NPM tokens'
+    confidence = 0.70  # npm_ prefix is fairly specific
 
     denylist = [
         # npmrc authToken

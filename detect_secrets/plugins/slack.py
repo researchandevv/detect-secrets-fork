@@ -15,6 +15,7 @@ from .base import RegexBasedDetector
 class SlackDetector(RegexBasedDetector):
     """Scans for Slack tokens."""
     secret_type = 'Slack Token'
+    confidence = 0.90  # xoxb-/xoxp-/xoxa-/xoxr- prefixes are unique to Slack
 
     denylist = (
         # Slack Token

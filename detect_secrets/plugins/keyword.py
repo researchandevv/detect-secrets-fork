@@ -267,6 +267,7 @@ class KeywordDetector(BasePlugin):
     This checks if denylisted keywords are present in the analyzed string.
     """
     secret_type = 'Secret Keyword'
+    confidence = 0.40  # very context-dependent; keyword matching has high FP rate
 
     def __init__(self, keyword_exclude: Optional[str] = None) -> None:
         self.keyword_exclude = None

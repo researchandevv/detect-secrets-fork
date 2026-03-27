@@ -12,6 +12,7 @@ from .base import RegexBasedDetector
 class JwtTokenDetector(RegexBasedDetector):
     """Scans for JWTs."""
     secret_type = 'JSON Web Token'
+    confidence = 0.45  # eyJ* prefix is common; many JWTs are non-secret
     denylist = [
         re.compile(r'eyJ[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*?'),
     ]

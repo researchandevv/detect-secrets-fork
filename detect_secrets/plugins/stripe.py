@@ -10,6 +10,7 @@ from .base import RegexBasedDetector
 class StripeDetector(RegexBasedDetector):
     """Scans for Stripe keys."""
     secret_type = 'Stripe Access Key'
+    confidence = 0.90  # sk_live_/rk_live_/pk_live_ prefixes are unique to Stripe
 
     denylist = (
         # Stripe standard keys begin with sk_live and restricted with rk_live

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Note: This module is an overlay — it is not called by the core scan engine.
 Use demo.py or import get_confidence/get_contextual_confidence directly
@@ -36,11 +38,12 @@ probability drops multiplicatively, making the finding high-priority.
 
 # Confidence scores per detector type (0.0 = always FP, 1.0 = always real)
 # Calibrated from: known pattern specificity + industry FP rates
-DETECTOR_CONFIDENCE = {
+DETECTOR_CONFIDENCE: dict[str, float] = {
     # High confidence (>0.8): specific prefixes, almost always real
     'Anthropic API Key': 0.95,           # sk-ant-* prefix is unique
     'GitHub Token': 0.95,                # ghp_/gho_/ghu_ prefixes
-    'GitLab Personal Access Token': 0.95, # glpat-* prefix
+    'GitLab Personal Access Token': 0.95, # glpat-* prefix (gitlab_pat.py)
+    'GitLab Token': 0.90,                # glpat-/gldt-/glrt- prefixes (gitlab_token.py)
     'HuggingFace Token': 0.90,           # hf_* prefix
     'Slack Token': 0.90,                 # xoxb-/xoxp-/xoxa- prefixes
     'Stripe Access Key': 0.90,           # sk_live_/rk_live_ prefixes
@@ -60,6 +63,11 @@ DETECTOR_CONFIDENCE = {
     'CI/CD Hardcoded Secret': 0.85,      # Hardcoded tokens in workflow files
     'Package Registry Token': 0.80,      # Cargo/NuGet/RubyGems/Go registry tokens
 
+    'Artifactory Credentials': 0.70,     # AKC/AP[A-Z] prefixes are fairly specific
+    'Discord Bot Token': 0.80,           # base64-encoded bot ID + token format
+    'Mailchimp Access Key': 0.75,        # hex-datacenter pattern (abc123-us1)
+    'Square OAuth Secret': 0.85,         # sq0atp-/sq0csp- prefixes are unique
+
     # Medium confidence (0.4-0.8): pattern-based but context-dependent
     'Kubernetes Secret': 0.70,           # JWT in K8s context
     'Terraform Secret': 0.65,            # Hardcoded credentials in HCL
@@ -67,6 +75,11 @@ DETECTOR_CONFIDENCE = {
     'Cloudflare API Token': 0.60,        # Context-dependent hex
     'Vercel API Token': 0.55,            # Context-dependent
     'Supabase API Key': 0.50,            # JWT or sbp_ prefix
+    'Azure Storage Account access key': 0.75, # base64 key after account name
+    'Cloudant Credentials': 0.65,        # assignment-based with cloudant keyword
+    'IBM Cloud IAM Key': 0.70,           # assignment-based with ibm keyword
+    'IBM COS HMAC Credentials': 0.65,    # HMAC key pattern with ibm/cos context
+    'SoftLayer Credentials': 0.60,       # assignment-based with softlayer keyword
     'Basic Auth Credentials': 0.50,      # URI format
     'Connection String Secret': 0.75,    # DB/service URI with embedded creds
     'JSON Web Token': 0.45,              # eyJ* — many are non-secret
@@ -107,18 +120,18 @@ def get_confidence(secret_type: str) -> float:
     return 0.5
 
 
-def filter_by_confidence(secrets, min_confidence=0.5):
+def filter_by_confidence(secrets: list, min_confidence: float = 0.5) -> list:
     """Filter secrets to only include those above minimum confidence threshold."""
     return [s for s in secrets if get_confidence(s.type) >= min_confidence]
 
 
-def sort_by_confidence(secrets):
+def sort_by_confidence(secrets: list) -> list:
     """Sort secrets by confidence (highest first)."""
     return sorted(secrets, key=lambda s: get_confidence(s.type), reverse=True)
 
 
 # Context modifiers: adjust confidence based on file/repo context
-CONTEXT_MODIFIERS = {
+CONTEXT_MODIFIERS: dict[str, dict[str, list[str] | float]] = {
     # Files that legitimately contain secret-like patterns
     'secret_management': {
         'file_patterns': ['vault', 'secret', 'credential', 'auth', 'token', 'key-management'],
@@ -159,7 +172,7 @@ CONTEXT_MODIFIERS = {
 # Rapid-dismiss patterns: near-zero true positive probability.
 # Files matching these patterns should be skipped entirely — investigating them
 # has negative expected value (time cost > 0, information gain ~ 0).
-RAPID_DISMISS_PATTERNS = [
+RAPID_DISMISS_PATTERNS: list[str] = [
     'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
     '.min.js', '.min.css', '.bundle.js',
     'node_modules/', '.yarn/', 'vendor/bundle/',
@@ -177,7 +190,7 @@ def should_rapid_dismiss(filename: str) -> bool:
     return any(p in fl for p in RAPID_DISMISS_PATTERNS)
 
 
-def verify_plugin_uniqueness() -> list:
+def verify_plugin_uniqueness() -> list[dict[str, str | list[str]]]:
     """Check for duplicate secret_types across all registered plugins.
 
     From Ch9 total order broadcast: plugin discovery must be deterministic.

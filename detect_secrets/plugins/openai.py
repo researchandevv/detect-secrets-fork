@@ -9,6 +9,7 @@ from detect_secrets.plugins.base import RegexBasedDetector
 class OpenAIDetector(RegexBasedDetector):
     """Scans for OpenAI tokens."""
     secret_type = 'OpenAI Token'
+    confidence = 0.85  # sk-* pattern with length constraints; distinctive
 
     denylist = [
         # refs https://community.openai.com/t/what-are-the-valid-characters-for-the-apikey/288643

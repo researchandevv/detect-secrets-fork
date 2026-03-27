@@ -12,6 +12,7 @@ class CloudantDetector(RegexBasedDetector):
     """Scans for Cloudant credentials."""
 
     secret_type = 'Cloudant Credentials'
+    confidence = 0.65  # assignment-based regex with cloudant keyword; moderately specific
 
     # opt means optional
     dot = r'\.'

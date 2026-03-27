@@ -140,6 +140,7 @@ class HighEntropyStringsPlugin(BasePlugin, metaclass=ABCMeta):
 class Base64HighEntropyString(HighEntropyStringsPlugin):
     """Scans for random-looking base64 encoded strings."""
     secret_type = 'Base64 High Entropy String'
+    confidence = 0.20  # catches many non-secrets (UUIDs, encoded data)
 
     def __init__(self, limit: float = 4.5) -> None:
         super().__init__(
@@ -158,6 +159,7 @@ class HexHighEntropyString(HighEntropyStringsPlugin):
     """Scans for random-looking hex encoded strings."""
 
     secret_type = 'Hex High Entropy String'
+    confidence = 0.15  # catches UUIDs, hashes, commit SHAs; very high FP rate
 
     def __init__(self, limit: float = 3.0) -> None:
         super().__init__(

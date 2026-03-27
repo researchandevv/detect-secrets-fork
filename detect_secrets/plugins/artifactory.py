@@ -6,6 +6,7 @@ from .base import RegexBasedDetector
 class ArtifactoryDetector(RegexBasedDetector):
     """Scans for Artifactory credentials."""
     secret_type = 'Artifactory Credentials'
+    confidence = 0.70  # AKC/AP[A-Z] prefixes are fairly specific but not unique
 
     denylist = [
         # Artifactory tokens begin with AKC

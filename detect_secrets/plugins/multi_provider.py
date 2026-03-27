@@ -32,7 +32,7 @@ from .confidence import get_confidence
 
 # Provider groups — secrets in these categories indicate the credential belongs
 # to a specific ecosystem. A file touching multiple ecosystems is suspicious.
-AI_PROVIDER_TYPES = {
+AI_PROVIDER_TYPES: set[str] = {
     'Anthropic API Key',
     'OpenAI Token',
     'HuggingFace Token',
@@ -40,7 +40,7 @@ AI_PROVIDER_TYPES = {
     'Databricks API Token',
 }
 
-CLOUD_PROVIDER_TYPES = {
+CLOUD_PROVIDER_TYPES: set[str] = {
     'AWS Access Key',
     'Cloudflare API Token',
     'Vercel API Token',
@@ -49,7 +49,7 @@ CLOUD_PROVIDER_TYPES = {
     'Azure Storage Account access key',
 }
 
-CI_CD_TYPES = {
+CI_CD_TYPES: set[str] = {
     'GitHub Token',
     'GitLab Personal Access Token',
     'NPM tokens',
@@ -57,7 +57,7 @@ CI_CD_TYPES = {
     'Docker Registry Token',
 }
 
-COMMS_TYPES = {
+COMMS_TYPES: set[str] = {
     'Slack Token',
     'Telegram Bot Token',
     'SendGrid API Key',
@@ -67,10 +67,10 @@ COMMS_TYPES = {
 }
 
 # All categorized types for quick lookup
-ALL_CATEGORIZED = AI_PROVIDER_TYPES | CLOUD_PROVIDER_TYPES | CI_CD_TYPES | COMMS_TYPES
+ALL_CATEGORIZED: set[str] = AI_PROVIDER_TYPES | CLOUD_PROVIDER_TYPES | CI_CD_TYPES | COMMS_TYPES
 
 # Minimum distinct detector types in one file to flag as concentrated
-CONCENTRATION_THRESHOLD = 3
+CONCENTRATION_THRESHOLD: int = 3
 
 
 def find_concentrated_files(scan_results: dict, threshold: int = CONCENTRATION_THRESHOLD) -> list[dict]:
@@ -120,7 +120,7 @@ def find_concentrated_files(scan_results: dict, threshold: int = CONCENTRATION_T
     return concentrated
 
 
-def calculate_concentration_score(types_in_file: set) -> float:
+def calculate_concentration_score(types_in_file: set[str]) -> float:
     """Higher score = more likely real credentials (not FPs).
 
     Score components:
@@ -155,7 +155,7 @@ def calculate_concentration_score(types_in_file: set) -> float:
     return round(score, 4)
 
 
-def _categorize(types: set) -> set:
+def _categorize(types: set[str]) -> set[str]:
     """Return which provider categories are represented."""
     categories = set()
     if types & AI_PROVIDER_TYPES:

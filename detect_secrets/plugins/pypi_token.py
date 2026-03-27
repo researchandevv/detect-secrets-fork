@@ -9,6 +9,7 @@ from detect_secrets.plugins.base import RegexBasedDetector
 class PypiTokenDetector(RegexBasedDetector):
     """Scans for PyPI tokens."""
     secret_type = 'PyPI Token'
+    confidence = 0.90  # pypi-AgE* prefix is unique to PyPI
 
     denylist = [
         # refs https://warehouse.pypa.io/development/token-scanning.html

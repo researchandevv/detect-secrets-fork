@@ -19,6 +19,7 @@ class IbmCosHmacDetector(RegexBasedDetector):
     #   host, defaults to 's3.us.cloud-object-storage.appdomain.cloud'
 
     secret_type = 'IBM COS HMAC Credentials'
+    confidence = 0.65  # HMAC key pattern with ibm/cos context; some FP risk
 
     token_prefix = r'(?:(?:ibm)?[-_]?cos[-_]?(?:hmac)?|)'
     password_keyword = r'(?:secret[-_]?(?:access)?[-_]?key)'

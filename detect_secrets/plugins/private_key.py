@@ -38,6 +38,7 @@ class PrivateKeyDetector(RegexBasedDetector):
     """
 
     secret_type = 'Private Key'
+    confidence = 0.95  # PEM headers (BEGIN RSA PRIVATE KEY, etc.) are definitive
 
     denylist = [
         re.compile(regexp)

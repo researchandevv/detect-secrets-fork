@@ -13,6 +13,7 @@ from .base import RegexBasedDetector
 class MailchimpDetector(RegexBasedDetector):
     """Scans for Mailchimp keys."""
     secret_type = 'Mailchimp Access Key'
+    confidence = 0.75  # hex-datacenter pattern (e.g., abc123-us1) is fairly specific
 
     denylist = (
         re.compile(r'[0-9a-z]{32}-us[0-9]{1,2}'),

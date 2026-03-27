@@ -9,6 +9,7 @@ from .base import RegexBasedDetector
 class TwilioKeyDetector(RegexBasedDetector):
     """Scans for Twilio API keys."""
     secret_type = 'Twilio API Key'
+    confidence = 0.85  # AC/SK prefixes with length constraints
 
     denylist = [
         # Account SID (ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx)

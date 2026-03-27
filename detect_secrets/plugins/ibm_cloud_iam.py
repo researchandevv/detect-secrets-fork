@@ -10,6 +10,7 @@ class IbmCloudIamDetector(RegexBasedDetector):
     """Scans for IBM Cloud IAM Key."""
 
     secret_type = 'IBM Cloud IAM Key'
+    confidence = 0.70  # assignment-based with ibm keyword; pattern is semi-specific
 
     # opt means optional
     opt_ibm_cloud_iam = r'(?:ibm(?:_|-|)cloud(?:_|-|)iam|cloud(?:_|-|)iam|' + \

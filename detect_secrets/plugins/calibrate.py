@@ -13,13 +13,15 @@ Usage:
     results = calibrate_from_baseline('.secrets.baseline')
     # Returns: {detector_type: {tp: N, fp: N, total: N, tp_rate: float, suggested_confidence: float}}
 """
+from __future__ import annotations
+
 import json
 import os
 from pathlib import Path
 from .confidence import DETECTOR_CONFIDENCE
 
 
-def calibrate_from_baseline(baseline_path: str) -> dict:
+def calibrate_from_baseline(baseline_path: str) -> dict[str, dict[str, int | float | bool | None]]:
     """Analyze a labeled baseline to compute per-detector TP rates.
 
     A labeled baseline has secrets marked with is_secret: true/false
@@ -33,7 +35,7 @@ def calibrate_from_baseline(baseline_path: str) -> dict:
     data = json.loads(path.read_text())
     results = data.get("results", {})
 
-    stats = {}  # {secret_type: {tp: 0, fp: 0, unlabeled: 0}}
+    stats: dict[str, dict[str, int]] = {}  # {secret_type: {tp: 0, fp: 0, unlabeled: 0}}
 
     for filename, secrets in results.items():
         for secret in secrets:
@@ -51,7 +53,7 @@ def calibrate_from_baseline(baseline_path: str) -> dict:
                 stats[stype]["unlabeled"] += 1
 
     # Compute TP rates and suggested confidence
-    calibration = {}
+    calibration: dict[str, dict[str, int | float | bool | None]] = {}
     for stype, s in stats.items():
         labeled = s["tp"] + s["fp"]
         tp_rate = s["tp"] / labeled if labeled > 0 else None
@@ -72,7 +74,7 @@ def calibrate_from_baseline(baseline_path: str) -> dict:
     return calibration
 
 
-def format_calibration_report(calibration: dict) -> str:
+def format_calibration_report(calibration: dict[str, dict[str, int | float | bool | None]]) -> str:
     """Format calibration results as a readable report."""
     lines = ["# Confidence Calibration Report", ""]
     lines.append(f"{'Detector':<35} {'TP':>4} {'FP':>4} {'Rate':>6} {'Current':>8} {'Suggested':>9} {'Sufficient':>10}")
@@ -89,7 +91,7 @@ def format_calibration_report(calibration: dict) -> str:
     return "\n".join(lines)
 
 
-def save_calibration(calibration: dict, output_path: str) -> str:
+def save_calibration(calibration: dict[str, dict[str, int | float | bool | None]], output_path: str) -> str:
     """Write calibration results to a JSON file atomically (tmp + rename).
 
     Ensures a crash mid-write never leaves a corrupt calibration file.

@@ -6,12 +6,14 @@ Usage:
     python demo.py /path/to/scan
     python demo.py .                    # scan current directory
     python demo.py --example            # scan built-in test cases
+    python demo.py --min-confidence 0.5 /path/to/scan  # hide low-confidence findings
 """
+import argparse
 import sys
 import json
 import os
 
-def run_demo(target_path=None, example=False):
+def run_demo(target_path=None, example=False, min_confidence=0.0):
     from detect_secrets.core.scan import scan_file
     from detect_secrets.settings import default_settings
     from detect_secrets.plugins.confidence import get_confidence, get_contextual_confidence
@@ -62,8 +64,18 @@ DATABASE_URL = "postgresql://admin:SecretPass123@db.example.com:5432/prod"
                 scan_failures += 1
                 print(f"  [warn] Failed to scan {fp}: {e}", file=sys.stderr)
 
+    # Apply --min-confidence filter before display
+    if min_confidence > 0.0:
+        all_secrets = [
+            (fp, s) for fp, s in all_secrets
+            if get_contextual_confidence(s.type, fp) >= min_confidence
+        ]
+
     if not all_secrets:
-        print(f"\n✅ Clean! Scanned {total_files} files, no secrets found.")
+        if min_confidence > 0.0:
+            print(f"\n✅ No findings above {min_confidence:.0%} confidence in {total_files} files.")
+        else:
+            print(f"\n✅ Clean! Scanned {total_files} files, no secrets found.")
         return
 
     # Sort by confidence
@@ -95,18 +107,25 @@ DATABASE_URL = "postgresql://admin:SecretPass123@db.example.com:5432/prod"
             print(f"   ... and {len(low) - 5} more low-confidence findings")
 
     print(f"\n📊 Summary: {len(all_secrets)} findings in {total_files} files")
+    if min_confidence > 0.0:
+        print(f"   Filtered: showing only >= {min_confidence:.0%} confidence")
     print(f"   🔴 {len(high)} high  🟡 {len(medium)} medium  ⚪ {len(low)} low confidence")
     if scan_failures:
         print(f"   ⚠️  {scan_failures} file(s) failed to scan (see stderr for details)")
-    print(f"   Use --min-confidence 0.5 to hide likely false positives")
+    if min_confidence == 0.0:
+        print(f"   Use --min-confidence 0.5 to hide likely false positives")
 
     if example:
         os.unlink(target_path)
 
 if __name__ == '__main__':
-    if '--example' in sys.argv:
-        run_demo(example=True)
-    elif len(sys.argv) > 1:
-        run_demo(sys.argv[1])
-    else:
-        run_demo()
+    parser = argparse.ArgumentParser(
+        description='Scan for secrets with confidence scoring.',
+        usage='python demo.py [--min-confidence THRESHOLD] [--example] [PATH]',
+    )
+    parser.add_argument('path', nargs='?', default=None, help='File or directory to scan')
+    parser.add_argument('--example', action='store_true', help='Scan built-in test cases')
+    parser.add_argument('--min-confidence', type=float, default=0.0,
+                        help='Hide findings below this confidence threshold (0.0-1.0)')
+    args = parser.parse_args()
+    run_demo(target_path=args.path, example=args.example, min_confidence=args.min_confidence)

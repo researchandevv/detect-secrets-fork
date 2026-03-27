@@ -1,135 +1,210 @@
-# Contributing
+# Contributing to detect-secrets (Confidence Fork)
 
-Thanks for your interest in helping to grow this repository, and make it better
-for developers everywhere! This document serves as a guide to help you quickly
-gain familarity with the repository, and start your development environment so
-that you can quickly hit the ground running.
+This fork adds confidence scoring to detect-secrets. This guide explains how
+to add new detectors, configure confidence scores, use the filter system,
+and write tests. For general project background, see [docs/design.md](/docs/design.md).
 
-## 1. Learn the Overall Layout of the Code
-
-Be sure to read through the [overview of `detect-secrets`' design](/docs/design.md) before
-starting to work on it! This will give you a better idea of the different components to the
-system, and how they interact together to find secrets.
-
-## 2. Building Your Development Environment
-
-There are several ways to spin up your virtual environment:
-
-**Casual Python Developers**:
+## Development Setup
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements-dev.txt
-```
-
-**Regular Python Developers:**
-
-```bash
-virtualenv --python=python3 venv
-source venv/bin/activate
-pip install -r requirements-dev.txt
-```
-
-> **Developer Note**: The main difference between this method and the former one (using Python's
-  in-built virtual environment) is that Python's `venv` module pins the `pip` version. However,
-  it doesn't matter too much if you're working on this repository alone, since `detect-secrets`
-  doesn't ship with many dependency requirements.
-
-or
-
-```bash
-tox -e venv
-source venv/bin/activate
-```
-
-> **Developer Note**: The benefit of this is that `tox` sets up a common development environment
-  for you. The downside is that you'll need to install `tox` first -- which if you already have,
-  you wouldn't be reading this section :)
-
-
-Whichever way you choose, you can check to see whether you're successful by executing:
-
-```bash
 python -m detect_secrets --version
 ```
 
-## 3. Run tests
-
-Tests should succeed on master. Any code additions you contribute will also need testing
-so it's good to run tests first to make sure you have a working copy. Don't worry -- the tests
-don't take long!
+Run the test suite:
 
 ```bash
-$ time python -m pytest tests
-...
-real    0m10.113s
-user    0m6.848s
-sys     0m2.486s
+python -m pytest tests          # fast: ~10 seconds
+tox -e py311                    # full: linting + coverage + mypy
 ```
 
-### Running the Entire Test Suite
+## Adding a New Detector
 
-You can run the test suite in the interpreter of your choice (in this example, `py37`) by doing:
+Every detector is a single file in `detect_secrets/plugins/`. Most detectors
+extend `RegexBasedDetector`.
 
-```bash
-tox -e py37
+### 1. Create the plugin file
+
+```python
+# detect_secrets/plugins/acme.py
+import re
+from .base import RegexBasedDetector
+
+class AcmeApiKeyDetector(RegexBasedDetector):
+    """Scans for Acme Corp API keys (acme_sk_*)."""
+    secret_type = 'Acme API Key'
+    confidence = 0.85          # <-- REQUIRED in this fork
+    denylist = [
+        re.compile(r'acme_sk_[A-Za-z0-9]{32,}'),
+    ]
 ```
 
-This will also run the code through our series of coverage tests, `mypy` rules and other linting
-checks to enforce a consistent coding style.
+That's it. The plugin discovery system auto-registers any `BasePlugin` subclass.
 
-For a list of supported interpreters, check out `envlist` in `tox.ini`.
+### 2. Choose `secret_type` carefully
 
-If you wanted to run **all** interpreters (might take a while), you can also just run:
+- Must be unique across all plugins (no two plugins share the same value).
+- Must be human-readable -- it appears in scan output and baselines.
+- Once published, changing it requires a baseline migration.
 
-```bash
-make test
+### 3. Set the `confidence` class attribute
+
+Every detector in this fork **must** declare a `confidence` float (0.0--1.0).
+This is the fork's core differentiator -- it tells users how likely a finding
+is to be a real secret vs. a false positive.
+
+**Calibration guidelines:**
+
+| Range       | Meaning                          | Example                                    |
+|-------------|----------------------------------|--------------------------------------------|
+| 0.90--1.00  | Unique prefix, almost always real | `sk-ant-*` (Anthropic), PEM headers         |
+| 0.70--0.89  | Strong prefix, occasional FP     | `npm_*`, `dckr_pat_*`, connection strings   |
+| 0.40--0.69  | Context-dependent                 | Hex tokens, Terraform HCL, Vercel env vars  |
+| 0.10--0.39  | High entropy / keyword-based      | Base64 strings, keyword matches             |
+| < 0.10      | Informational only                | Public IPs                                  |
+
+Ask yourself:
+
+- Does the pattern have a **unique prefix**? (high confidence)
+- Could the pattern match **non-secret content** like UUIDs, hashes, or
+  variable names? (lower confidence)
+- Is the match **dependent on file context** (e.g., only meaningful in
+  `.env` files)? (medium confidence, contextual modifiers will adjust it)
+
+### 4. Optionally add a `verify()` method
+
+If the service provides a way to check whether a key is live (e.g., a
+lightweight API call), add a `verify()` method. Return `VerifiedResult.VERIFIED_TRUE`,
+`VERIFIED_FALSE`, or `UNVERIFIED`.
+
+```python
+def verify(self, secret: str):
+    from detect_secrets.constants import VerifiedResult
+    import requests
+    try:
+        resp = requests.get(
+            'https://api.acme.com/v1/whoami',
+            headers={'Authorization': f'Bearer {secret}'},
+            timeout=5,
+        )
+        return VerifiedResult.VERIFIED_TRUE if resp.status_code == 200 \
+            else VerifiedResult.VERIFIED_FALSE
+    except Exception:
+        return VerifiedResult.UNVERIFIED
 ```
 
-### Running a Specific Test
+### 5. Write tests
 
-With `pytest`, you can specify tests you want to run in multiple granularity
-levels. Here are a couple of examples:
+Create `tests/plugins/acme_test.py`:
 
-- Running all tests related to `core/baseline.py`
+```python
+import pytest
+from detect_secrets.plugins.acme import AcmeApiKeyDetector
 
-  ```bash
-  pytest tests/core/baseline_test.py
-  ```
+class TestAcmeApiKeyDetector:
+    def setup_method(self):
+        self.plugin = AcmeApiKeyDetector()
 
-- Running a single test class
+    def test_detect_real_key(self):
+        assert self.plugin.analyze_line(
+            filename='config.py',
+            line='API_KEY = "acme_sk_abcdefghijklmnopqrstuvwxyz123456"',
+            line_number=1,
+        )
 
-  ```bash
-  pytest tests/core/baseline_test.py::TestCreate
-  ```
+    def test_ignore_short_match(self):
+        assert not self.plugin.analyze_line(
+            filename='config.py',
+            line='API_KEY = "acme_sk_short"',
+            line_number=1,
+        )
 
-- Running a single test function, inside test class
+    def test_confidence_attribute(self):
+        assert hasattr(AcmeApiKeyDetector, 'confidence')
+        assert 0.0 <= AcmeApiKeyDetector.confidence <= 1.0
+```
 
-  ```bash
-  pytest tests/core/baseline_test.py::TestCreate::test_basic_usage
-  ```
+**Every new detector must have:**
+- At least one positive detection test (real pattern matches).
+- At least one negative test (similar but non-matching pattern).
+- A confidence attribute test.
 
-- Running a single root level test function
+## Confidence Scoring System
 
-  ```bash
-  pytest tests/plugins/baseline_test.py::test_upgrade_succeeds
-  ```
+The confidence system resolves scores in this order:
 
-Generally speaking, we use test classes to group a series of related test cases together (e.g.
-`TestCreate` tests the `detect_secrets.core.baseline.create` functionality), but root test
-functions otherwise. If you're writing tests for your plugins, you should probably just use
-root test functions.
+1. **`DETECTOR_CONFIDENCE` dict** in `confidence.py` -- calibration overrides.
+   This is where empirically-tuned scores go after real-world data analysis.
+2. **Plugin class `confidence` attribute** -- self-describing plugins. New
+   plugins declare their score here and it works without editing confidence.py.
+3. **Default 0.5** -- unknown detector types get a neutral score.
 
-## 4. Make Your Change
+For new detectors, just set the class attribute (step 2). Only add to the
+central dict if you have empirical scan data that overrides the initial estimate.
 
-Want to contribute a new plugin? Check out more details here:
-[Writing Your Own Plugin](/docs/plugins.md#Writing%20Your%20Own%20Plugin)
+### Contextual Confidence
 
-What about contributing better false positive filters? Check out more details here:
-[Writing Your Own Filter](/docs/filters.md#Writing%20Your%20Own%20Filter)
+`get_contextual_confidence(secret_type, filename)` adjusts the base score
+using file context. For example:
 
-## 5. Deploying Changes
+- A Stripe key in `test_fixtures.py` gets a -0.4 modifier (test files)
+- A key in `package-lock.json` gets a -0.9 modifier (lock files)
+- A key in `vendor/` gets a -0.6 modifier (third-party code)
 
-Check out [more detailed upgrade instructions here](/docs/upgrades.md), and how to write
-backwards-compatible changes using the built-in upgrade infrastructure.
+Context modifiers are defined in `CONTEXT_MODIFIERS` in `confidence.py`.
+You do not need to modify these when adding a new detector -- they apply
+automatically to all detector types.
+
+### Rapid Dismiss
+
+Files matching `RAPID_DISMISS_PATTERNS` (lock files, minified JS, node_modules)
+are skipped entirely. These have near-zero probability of containing real
+secrets. If your detector targets a file type that is currently rapid-dismissed,
+you may need to adjust the pattern list.
+
+## Filter System
+
+Filters in `detect_secrets/filters/` reduce false positives by examining
+context around a finding. The built-in filters include:
+
+- **allowlist** -- inline `# pragma: allowlist secret` comments
+- **heuristic** -- common FP patterns (likely not a secret, looks like variable name)
+- **gibberish** -- statistical detection of random-looking but non-secret strings
+- **wordlist** -- known non-secret tokens
+
+To add a custom filter:
+
+1. Create a function in `detect_secrets/filters/` that returns `True` to
+   filter out (suppress) a finding:
+
+```python
+def should_exclude_secret(filename: str, secret: str) -> bool:
+    """Exclude findings that match known safe patterns."""
+    return secret.startswith('EXAMPLE_')
+```
+
+2. Register the filter via the settings system or pass it to the scan call.
+
+## Multi-Provider Analysis
+
+`multi_provider.py` analyzes files that contain secrets from 3+ different
+providers. When a single file has an AWS key, a Stripe key, and a Slack token,
+the probability that ALL of them are false positives drops multiplicatively.
+This is implemented as a post-scan analysis step, not a detector.
+
+## Code Style
+
+- Follow existing patterns in the codebase.
+- Use `tox` to run linting before submitting.
+- Keep detector files focused -- one detector class per file.
+- Document the `confidence` score with a brief comment explaining the reasoning.
+
+## Pull Request Checklist
+
+- [ ] New detector has `secret_type` (unique) and `confidence` (calibrated)
+- [ ] Tests cover positive match, negative match, and confidence attribute
+- [ ] `tox` passes locally
+- [ ] If you modified confidence.py, scores are justified with reasoning
+- [ ] No secrets, credentials, or API keys in test fixtures (use obvious fakes)

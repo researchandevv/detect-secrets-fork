@@ -9,6 +9,7 @@ from .base import RegexBasedDetector
 class DiscordBotTokenDetector(RegexBasedDetector):
     """Scans for Discord Bot token."""
     secret_type = 'Discord Bot Token'
+    confidence = 0.80  # base64-encoded bot ID + token format is fairly specific
 
     denylist = [
         # Discord Bot Token ([M|N|O]XXXXXXXXXXXXXXXXXXXXXXX[XX].XXXXXX.XXXXXXXXXXXXXXXXXXXXXXXXXXX)

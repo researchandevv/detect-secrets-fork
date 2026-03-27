@@ -12,6 +12,7 @@ class SoftlayerDetector(RegexBasedDetector):
     """Scans for Softlayer credentials."""
 
     secret_type = 'SoftLayer Credentials'
+    confidence = 0.60  # assignment-based with softlayer/ibm keyword; moderate specificity
 
     # opt means optional
     sl = r'(?:softlayer|sl)(?:_|-|)(?:api|)'

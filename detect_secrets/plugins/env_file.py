@@ -9,6 +9,8 @@ the strong contextual signal that .env files are *intended* to hold secrets.
 
 This detector only activates on files named .env, .env.*, or *.env.
 """
+from __future__ import annotations
+
 import os
 import re
 from typing import Any
@@ -119,8 +121,8 @@ class EnvFileSecretDetector(BasePlugin):
     Matches lines where the key contains sensitive words and the value
     is not empty, not a comment, and not a template placeholder.
     """
-    secret_type = 'Environment Variable Secret'
-    confidence = 0.70
+    secret_type: str = 'Environment Variable Secret'
+    confidence: float = 0.70
 
     def analyze_string(self, string: str) -> Generator[str, None, None]:
         """Analyze a single KEY=VALUE line for secrets.

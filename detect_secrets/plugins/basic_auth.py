@@ -15,6 +15,7 @@ SUB_DELIMITER_CHARACTERS = '!$&\'()*+,;='
 class BasicAuthDetector(RegexBasedDetector):
     """Scans for Basic Auth formatted URIs."""
     secret_type = 'Basic Auth Credentials'
+    confidence = 0.50  # URI format with embedded creds; many FPs from docs and configs
 
     denylist = [
         re.compile(
