@@ -25,6 +25,7 @@ Usage:
 
 See also: confidence.py for per-secret scoring, calibrate.py for TP rate calibration.
 """
+from __future__ import annotations
 
 from .confidence import get_confidence
 

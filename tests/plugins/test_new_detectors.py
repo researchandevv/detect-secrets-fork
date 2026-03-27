@@ -10,7 +10,7 @@ from detect_secrets.plugins.notion import NotionTokenDetector
 from detect_secrets.plugins.supabase import SupabaseKeyDetector
 from detect_secrets.plugins.ethereum import EthereumPrivateKeyDetector
 from detect_secrets.plugins.firebase import FirebaseApiKeyDetector
-from detect_secrets.plugins.gitlab_pat import GitLabPatDetector
+from detect_secrets.plugins.gitlab_token import GitLabTokenDetector
 from detect_secrets.plugins.docker_secrets import DockerRegistryTokenDetector
 from detect_secrets.plugins.kubernetes import KubernetesSecretDetector
 from detect_secrets.plugins.terraform import TerraformSecretDetector
@@ -52,10 +52,10 @@ class TestFirebaseDetector:
         assert list(d.analyze_line('f', 'apiKey: "AIzaSyBcDeFgHiJkLmNoPqRsTuVwXyZ01234567"', 1))
 
 
-class TestGitLabPatDetector:
+class TestGitLabTokenDetector:
     def test_verify_method_exists(self):
-        """GitLabPatDetector exists for its verify() method; detection is handled by GitLabTokenDetector."""
-        d = GitLabPatDetector()
+        """GitLabTokenDetector should have verify() method after merge from gitlab_pat.py."""
+        d = GitLabTokenDetector()
         assert hasattr(d, 'verify')
         assert d.secret_type == 'GitLab Token'
 
@@ -135,6 +135,36 @@ class TestFakeCredentialFilter:
 
     def test_catches_example_text(self):
         assert is_likely_fake('this-is-an-example-key')
+
+
+class TestCloudflareDetector:
+    def test_detect_cloudflare_token(self):
+        d = CloudflareApiTokenDetector()
+        assert list(d.analyze_line('f', 'CF_API_TOKEN=abcdef0123456789abcdef0123456789abcdef01', 1))
+
+    def test_detect_cloudflare_api_token_variant(self):
+        d = CloudflareApiTokenDetector()
+        assert list(d.analyze_line('f', 'CLOUDFLARE_API_TOKEN=abcdef0123456789abcdef0123456789abcdef01', 1))
+
+
+class TestVercelDetector:
+    def test_detect_vercel_token(self):
+        d = VercelTokenDetector()
+        assert list(d.analyze_line('f', 'VERCEL_TOKEN=aBcDeFgHiJkLmNoPqRsTuVwX', 1))
+
+    def test_detect_vercel_api_key(self):
+        d = VercelTokenDetector()
+        assert list(d.analyze_line('f', 'vercel_api=xK9mZ2pQ7rL4wN8sT1vB3yU6', 1))
+
+
+class TestSupabaseDetector:
+    def test_detect_sbp_token(self):
+        d = SupabaseKeyDetector()
+        assert list(d.analyze_line('f', 'SUPABASE_KEY=sbp_abcdef0123456789abcdef0123456789abcdef01', 1))
+
+    def test_detect_supabase_jwt(self):
+        d = SupabaseKeyDetector()
+        assert list(d.analyze_line('f', 'SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSJ9.sig123', 1))
 
 
 class TestCloudflareNegative:

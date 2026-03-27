@@ -11,6 +11,7 @@ you diff two snapshots to see what changed.
 """
 
 import json
+import os
 import time
 from typing import Any
 from typing import Dict
@@ -69,8 +70,12 @@ def stamp_baseline(baseline_path: str) -> Dict[str, Any]:
     stamp = get_current_stamp()
     baseline['generated_by'] = stamp
 
-    with open(baseline_path, 'w') as f:
+    # Atomic write: write to tmp file then rename, so a crash mid-write
+    # doesn't corrupt the baseline.
+    tmp_path = baseline_path + '.tmp'
+    with open(tmp_path, 'w') as f:
         f.write(json.dumps(baseline, indent=2) + '\n')
+    os.rename(tmp_path, baseline_path)
 
     return stamp
 

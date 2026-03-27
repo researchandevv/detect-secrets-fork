@@ -10,5 +10,5 @@ class HashiCorpVaultTokenDetector(RegexBasedDetector):
         re.compile(r'hvb\.[A-Za-z0-9_\-]{24,}'),   # Batch tokens (modern)
         re.compile(r'hvr\.[A-Za-z0-9_\-]{24,}'),   # Recovery tokens (modern)
         # Legacy format: s. followed by exactly alphanumeric (NOT camelCase method names)
-        re.compile(r'(?<![a-z])s\.[A-Za-z0-9]{24}'),  # Legacy format: s. followed by 24 alphanumeric chars
+        re.compile(r'(?<![a-zA-Z0-9])s\.[A-Za-z0-9]{24}'),  # Legacy format: s. followed by 24 alphanumeric chars
     ]

@@ -37,8 +37,12 @@ def _scan_content(lines: List[str], filename: str) -> List[Dict]:
     findings = []
     for line_number, line in enumerate(lines, start=1):
         for secret in scan_line(line):
+            # scan_line sets filename to 'adhoc-string-scan' internally;
+            # override with the actual filename from git history.
+            secret.filename = filename
             findings.append({
                 'secret_type': secret.type,
+                'filename': filename,
                 'line_number': line_number,
                 'line_content': line.rstrip(),
             })

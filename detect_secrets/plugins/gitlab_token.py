@@ -7,7 +7,7 @@ from detect_secrets.plugins.base import RegexBasedDetector
 
 
 class GitLabTokenDetector(RegexBasedDetector):
-    """Scans for GitLab tokens."""
+    """Scans for GitLab tokens with optional verification."""
 
     secret_type = 'GitLab Token'
 
@@ -57,3 +57,21 @@ class GitLabTokenDetector(RegexBasedDetector):
         # -> becomes 64 base64-encoded characters
         re.compile(r'gloas-[A-Za-z0-9_\-]{64}(?!\w)'),
     ]
+
+    def verify(self, secret: str):
+        """Verify a GitLab token by calling the GitLab API."""
+        try:
+            from detect_secrets.constants import VerifiedResult
+            import requests
+            resp = requests.get(
+                'https://gitlab.com/api/v4/user',
+                headers={'PRIVATE-TOKEN': secret},
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                return VerifiedResult.VERIFIED_TRUE
+            elif resp.status_code == 401:
+                return VerifiedResult.VERIFIED_FALSE
+            return VerifiedResult.UNVERIFIED
+        except Exception:
+            return VerifiedResult.UNVERIFIED

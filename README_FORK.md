@@ -12,7 +12,6 @@ The original project has had no commits in 15+ months. This fork fixes bugs, mer
 |----------|---------|-------------|
 | **Anthropic API Key** | `sk-ant-*` | ✅ Live API check |
 | **HuggingFace Token** | `hf_*` | ✅ Live API check |
-| **GitLab PAT** | `glpat-*`, `gldt-*`, `glrt-*` | ✅ Live API check |
 | **Cloudflare API Token** | Context-aware 40-char hex | — |
 | **Vercel Token** | `VERCEL_TOKEN=*` | — |
 | **Databricks Token** | `dapi*` | — |
@@ -25,7 +24,8 @@ The original project has had no commits in 15+ months. This fork fixes bugs, mer
 | **Terraform Secret** | TFE tokens, provider credentials | — |
 | **AWS Bedrock** | Inference profile ARNs | — |
 | **HashiCorp Vault** | `hvs.*`, `hvb.*`, `hvr.*` | — |
-| **AWS Active Validator** | Enhanced AWS with verification | ✅ Format check |
+| **Connection String** | Database URIs with embedded passwords | — |
+| **Env File** | `KEY=VALUE` patterns in `.env` files | — |
 
 ### Active Secret Verification
 
@@ -36,6 +36,13 @@ detect-secrets scan --verify /path/to/code
 ```
 
 Currently supported: Anthropic, HuggingFace, GitLab. More coming.
+
+#### Security Considerations
+
+- Verification sends the detected secret to the respective API endpoint to check if it is active. Only use this on secrets you have authorization to test.
+- **Anthropic**: Verification calls the API's model list endpoint. If the key is valid, this may consume API credits.
+- **GitLab**: Verification calls the `/api/v4/user` endpoint. This may trigger rate limits or security alerts on the token owner's account.
+- Use `--no-verify` flag to skip verification when scanning repositories you do not own.
 
 ### False Positive Reduction
 

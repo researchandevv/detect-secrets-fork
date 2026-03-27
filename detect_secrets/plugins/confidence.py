@@ -54,7 +54,6 @@ DETECTOR_CONFIDENCE = {
     'Telegram Bot Token': 0.85,          # numeric:alphanumeric format
     'OpenAI Token': 0.85,                # sk-*T3BlbkFJ pattern
     'AWS Access Key': 0.80,              # AKIA* prefix
-    'AWS Access Key (Validatable)': 0.85, # Same + can verify
     'AWS Bedrock Key': 0.80,             # ARN format
     'Firebase API Key': 0.75,            # AIza* — also used by other Google services
     'Private Key': 0.95,                 # PEM headers are definitive
@@ -186,9 +185,15 @@ def get_contextual_confidence(secret_type: str, filename: str) -> float:
     
     for context_name, context in CONTEXT_MODIFIERS.items():
         for pattern in context['file_patterns']:
-            if pattern in filename_lower:
-                modifier = min(modifier, context['modifier'])  # Take strongest modifier
-                break
+            if pattern.startswith('.') and not pattern.startswith('./'):
+                # Extension check: must end with this extension
+                if filename_lower.endswith(pattern):
+                    modifier = min(modifier, context['modifier'])
+                    break
+            else:
+                if pattern in filename_lower:
+                    modifier = min(modifier, context['modifier'])  # Take strongest modifier
+                    break
     
     adjusted = max(0.05, base + modifier)  # Never go below 5%
     return round(adjusted, 2)
