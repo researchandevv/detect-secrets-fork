@@ -1,6 +1,7 @@
 """Tests for all new detectors added in the fork."""
 import pytest
 from detect_secrets.plugins.anthropic import AnthropicApiKeyDetector
+from detect_secrets.plugins.connection_string import ConnectionStringDetector
 from detect_secrets.plugins.huggingface import HuggingFaceTokenDetector
 from detect_secrets.plugins.cloudflare import CloudflareApiTokenDetector
 from detect_secrets.plugins.vercel import VercelTokenDetector
@@ -200,3 +201,64 @@ class TestEthereumNegative:
     def test_commit_hash_no_match(self):
         d = EthereumPrivateKeyDetector()
         assert not list(d.analyze_line('f', 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab', 1))
+
+
+class TestConnectionStringDetector:
+
+    @pytest.mark.parametrize(
+        'payload, should_flag',
+        [
+            # Positive: real credentials in connection strings
+            ('postgresql://admin:SecretPass123@db.example.com:5432/prod', True),
+            ('mongodb+srv://user:p4$$w0rd@cluster.mongodb.net/db', True),
+            ('mysql://root:hunter2@mysql.internal:3306/app', True),
+            ('redis://default:R3d!s_Pass@redis.cloud:6380/0', True),
+            ('amqp://guest:rabbitMQ_pass@broker:5672/vhost', True),
+            ('postgres://deploy:xK9mZ2@rds.amazonaws.com/production', True),
+            ('mssql://sa:Str0ngPass@sql-server:1433/master', True),
+            ('DATABASE_URL=postgresql://app:s3cretVal@db:5432/mydb', True),
+
+            # Negative: template placeholders
+            ('postgresql://user:${DB_PASSWORD}@host/db', False),
+            ('mongodb://user:<password>@host/db', False),
+            ('mysql://user:$MYSQL_PASS@host/db', False),
+            ('redis://user:{{redis_password}}@host/db', False),
+            ('postgres://user:%s@host/db', False),
+            ('postgresql://user:password@host/db', False),
+            ('amqp://user:changeme@host/db', False),
+
+            # Negative: no credentials
+            ('redis://localhost:6379', False),
+            ('mongodb://localhost/testdb', False),
+            ('postgresql://host:5432/db', False),
+
+            # Negative: non-database schemes (handled by BasicAuthDetector)
+            ('https://user:pass@example.com', False),
+            ('ftp://user:pass@files.example.com', False),
+        ],
+    )
+    def test_analyze_line(self, payload, should_flag):
+        logic = ConnectionStringDetector()
+        output = logic.analyze_line(filename='mock_filename', line=payload)
+        assert len(output) == int(should_flag), (
+            f'Expected {"flag" if should_flag else "no flag"} for: {payload}'
+        )
+
+    def test_secret_type(self):
+        assert ConnectionStringDetector.secret_type == 'Connection String Secret'
+
+    def test_extracts_password_not_full_uri(self):
+        """The yielded secret should be the password portion, not the full URI."""
+        logic = ConnectionStringDetector()
+        results = list(logic.analyze_string(
+            'postgresql://admin:SecretPass123@db.example.com:5432/prod',
+        ))
+        assert results == ['SecretPass123']
+
+    def test_extracts_complex_password(self):
+        """Passwords with special characters should be captured correctly."""
+        logic = ConnectionStringDetector()
+        results = list(logic.analyze_string(
+            'mongodb+srv://user:p4$$w0rd@cluster.mongodb.net/db',
+        ))
+        assert results == ['p4$$w0rd']

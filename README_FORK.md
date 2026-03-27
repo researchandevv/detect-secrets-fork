@@ -94,6 +94,19 @@ detect-secrets scan --list-all-plugins
 detect-secrets scan > .secrets.baseline
 ```
 
+## Confidence Calibration
+
+Static confidence scores are estimates. Calibration replaces them with actual TP rates from your labeled baselines (produced by `detect-secrets audit`):
+
+```python
+from detect_secrets.plugins.calibrate import calibrate_from_baseline, format_calibration_report
+
+results = calibrate_from_baseline('.secrets.baseline')
+print(format_calibration_report(results))
+```
+
+Output shows per-detector TP rate vs. current confidence score, and suggests adjustments when the sample size is sufficient (5+ labeled findings). Detectors that perform better or worse than their static scores become visible immediately.
+
 ## Writing Custom Plugins
 
 ```python
@@ -108,6 +121,26 @@ class MyCustomDetector(RegexBasedDetector):
 ```
 
 Drop the file in `detect_secrets/plugins/` and it's automatically discovered.
+
+## Baseline Compatibility Checking
+
+When you upgrade detect-secrets, existing `.secrets.baseline` files may produce phantom diffs because new plugins find things old ones didn't, or regex changes alter fingerprints. This fork adds version stamping to baselines so you can detect drift before it causes confusion.
+
+```python
+from detect_secrets.util.baseline_stamp import stamp_baseline, check_baseline_compat
+
+# Stamp a baseline with the current version and plugin manifest
+stamp_baseline('.secrets.baseline')
+
+# Later, after upgrading, check compatibility
+result = check_baseline_compat('.secrets.baseline')
+if not result['compatible']:
+    print(f"Version match: {result['version_match']}")
+    print(f"Added plugins:   {result['added_plugins']}")
+    print(f"Removed plugins: {result['removed_plugins']}")
+```
+
+The stamp is stored under a `generated_by` key in the baseline JSON and does not affect any existing fields.
 
 ## License
 

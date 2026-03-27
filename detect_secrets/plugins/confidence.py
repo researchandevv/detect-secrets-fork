@@ -63,6 +63,7 @@ DETECTOR_CONFIDENCE = {
     'Vercel API Token': 0.55,            # Context-dependent
     'Supabase API Key': 0.50,            # JWT or sbp_ prefix
     'Basic Auth Credentials': 0.50,      # URI format
+    'Connection String Secret': 0.75,    # DB/service URI with embedded creds
     'JSON Web Token': 0.45,              # eyJ* — many are non-secret
     'NPM tokens': 0.70,                  # npm_* prefix
     'Secret Keyword': 0.40,              # Very context-dependent
