@@ -10,6 +10,7 @@ records the exact detector build and plugin manifest at creation time, letting
 you diff two snapshots to see what changed.
 """
 
+import hashlib
 import json
 import os
 import time
@@ -68,6 +69,16 @@ def stamp_baseline(baseline_path: str) -> Dict[str, Any]:
         baseline = json.load(f)
 
     stamp = get_current_stamp()
+
+    # Causal chain: if a previous stamp exists, hash it and include in the new
+    # stamp so baseline versions form a Lamport-style chain.  You can verify
+    # that baseline v2 was created after seeing baseline v1 by checking that
+    # previous_stamp_hash matches SHA-256(json(v1's generated_by)).
+    previous_stamp = baseline.get('generated_by')
+    if previous_stamp is not None:
+        previous_json = json.dumps(previous_stamp, sort_keys=True, separators=(',', ':'))
+        stamp['previous_stamp_hash'] = hashlib.sha256(previous_json.encode()).hexdigest()
+
     baseline['generated_by'] = stamp
 
     # Atomic write: write to tmp file then rename, so a crash mid-write

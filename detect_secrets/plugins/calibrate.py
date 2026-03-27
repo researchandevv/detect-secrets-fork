@@ -14,6 +14,7 @@ Usage:
     # Returns: {detector_type: {tp: N, fp: N, total: N, tp_rate: float, suggested_confidence: float}}
 """
 import json
+import os
 from pathlib import Path
 from .confidence import DETECTOR_CONFIDENCE
 
@@ -86,3 +87,17 @@ def format_calibration_report(calibration: dict) -> str:
         )
 
     return "\n".join(lines)
+
+
+def save_calibration(calibration: dict, output_path: str) -> str:
+    """Write calibration results to a JSON file atomically (tmp + rename).
+
+    Ensures a crash mid-write never leaves a corrupt calibration file.
+    Returns the output path on success.
+    """
+    tmp_path = output_path + '.tmp'
+    with open(tmp_path, 'w') as f:
+        json.dump(calibration, f, indent=2)
+        f.write('\n')
+    os.rename(tmp_path, output_path)
+    return output_path

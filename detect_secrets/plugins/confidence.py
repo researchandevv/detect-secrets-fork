@@ -176,6 +176,45 @@ def should_rapid_dismiss(filename: str) -> bool:
     return any(p in fl for p in RAPID_DISMISS_PATTERNS)
 
 
+def verify_plugin_uniqueness() -> list:
+    """Check for duplicate secret_types across all registered plugins.
+
+    From Ch9 total order broadcast: plugin discovery must be deterministic.
+    If two plugins declare the same secret_type, the one that wins depends on
+    filesystem import order, which varies across OS and Python version.
+
+    Returns a list of conflict dicts, each with 'secret_type' and 'classes'
+    (the class names that share it).  Empty list means no conflicts.
+    """
+    try:
+        from detect_secrets.core.plugins.util import get_mapping_from_secret_type_to_class
+    except ImportError:
+        return [{'error': 'Could not import plugin discovery'}]
+
+    # get_mapping_from_secret_type_to_class returns one class per type (last
+    # wins).  To detect collisions we need to scan all plugin classes directly.
+    from detect_secrets.core.plugins import initialize as _init
+    from detect_secrets.core.plugins.util import import_plugins
+    import_plugins()
+
+    from detect_secrets.plugins.base import BasePlugin
+    seen: dict = {}  # secret_type -> [class_name, ...]
+    for cls in BasePlugin.__subclasses__():
+        st = getattr(cls, 'secret_type', None)
+        if st is None:
+            continue
+        seen.setdefault(st, []).append(cls.__name__)
+
+    conflicts = []
+    for secret_type, classes in sorted(seen.items()):
+        if len(classes) > 1:
+            conflicts.append({
+                'secret_type': secret_type,
+                'classes': sorted(classes),
+            })
+    return conflicts
+
+
 def get_contextual_confidence(secret_type: str, filename: str) -> float:
     """Get confidence adjusted by file context. More accurate than type-only scoring."""
     base = get_confidence(secret_type)

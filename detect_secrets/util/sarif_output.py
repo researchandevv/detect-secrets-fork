@@ -11,6 +11,7 @@ Usage:
     sarif = to_sarif(baseline_data, tool_name="detect-secrets-fork")
 """
 import json
+import os
 from datetime import datetime, timezone
 
 
@@ -85,7 +86,11 @@ def baseline_to_sarif_file(baseline_path: str, output_path: str = None,
         if output_path == baseline_path:
             output_path = baseline_path + ".sarif"
 
-    with open(output_path, "w") as f:
+    # Atomic write: write to a temp file then rename, so a crash mid-write
+    # never leaves a half-written SARIF file (Ch9 2PC pattern).
+    tmp_path = output_path + '.tmp'
+    with open(tmp_path, "w") as f:
         json.dump(sarif, f, indent=2)
+    os.rename(tmp_path, output_path)
 
     return output_path

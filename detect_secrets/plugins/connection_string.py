@@ -16,6 +16,12 @@ _PLACEHOLDER_RE = re.compile(
     r'|\*{3,}'         # **** placeholder
     r'|password'       # literal word "password"
     r'|changeme'       # common placeholder
+    r'|fixme'          # fix-later placeholder
+    r'|todo'           # incomplete placeholder
+    r'|insert_\w*'     # INSERT_YOUR_PASSWORD etc.
+    r'|replace_\w*'    # REPLACE_WITH_REAL etc.
+    r'|your_\w*'       # your_password, your_api_key etc.
+    r'|example\w*'     # example, examplepassword etc.
     r'|secret'         # common placeholder
     r')$',
     re.IGNORECASE,
