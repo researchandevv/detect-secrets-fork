@@ -73,10 +73,27 @@ pip install detect-secrets-enhanced
 
 From source:
 ```bash
-git clone https://github.com/YOUR_USERNAME/detect-secrets-enhanced
+git clone https://github.com/researchandevv/detect-secrets-enhanced
 cd detect-secrets-enhanced
 pip install -e .
 ```
+
+### Docker
+
+Scan any directory without installing Python or dependencies:
+
+```bash
+# Build the image
+docker build -t detect-secrets-enhanced .
+
+# Scan current directory
+docker run --rm -v $(pwd):/scan detect-secrets-enhanced scan .
+
+# List all 45 plugins
+docker run --rm detect-secrets-enhanced scan --list-all-plugins
+```
+
+The Docker image uses Python 3.11-slim with all optional extras (word_doc, gibberish filter).
 
 ## Quick Start
 
