@@ -9,6 +9,9 @@ class HashiCorpVaultTokenDetector(RegexBasedDetector):
         re.compile(r'hvs\.[A-Za-z0-9_\-]{24,}'),   # Service tokens (modern)
         re.compile(r'hvb\.[A-Za-z0-9_\-]{24,}'),   # Batch tokens (modern)
         re.compile(r'hvr\.[A-Za-z0-9_\-]{24,}'),   # Recovery tokens (modern)
-        # Legacy format: s. followed by exactly alphanumeric (NOT camelCase method names)
-        re.compile(r'(?<![a-zA-Z0-9])s\.[A-Za-z0-9]{24}'),  # Legacy format: s. followed by 24 alphanumeric chars
+        # Legacy format: s. followed by uppercase start then alphanumeric.
+        # Requires uppercase after s. to distinguish from JS camelCase methods
+        # (s.getSearchTimelineQueryIds is camelCase → no match,
+        #  s.ABCDEFGHIJKLMNOPQRSTUVWX is a token → match)
+        re.compile(r'(?<![a-zA-Z0-9])s\.[A-Z][A-Za-z0-9]{23,}'),
     ]
