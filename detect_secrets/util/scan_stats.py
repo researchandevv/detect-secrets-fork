@@ -94,6 +94,9 @@ def compute_stats(
     # Context impact: how many findings change tier when file context is applied
     ctx_impact = _compute_context_impact(all_secrets)
 
+    # Weighted priority scores
+    weighted = _compute_weighted_scores(all_secrets)
+
     return {
         'total_secrets': total_secrets,
         'total_files': len(results),
@@ -104,6 +107,7 @@ def compute_stats(
         'by_confidence_tier': by_confidence_tier,
         'by_contextual_tier': by_contextual_tier,
         'context_impact': ctx_impact,
+        'weighted_scores': weighted,
         'verified_count': verified_count,
         'unverified_count': total_secrets - verified_count,
         'baseline_version': baseline_dict.get('version', 'unknown'),
@@ -137,6 +141,43 @@ def _compute_confidence_tiers(
             tiers['low'] += 1
 
     return dict(tiers)
+
+
+def _compute_weighted_scores(
+    secrets: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Compute confidence-weighted priority scores.
+
+    Instead of raw counts per tier, produces a single weighted total
+    and per-type weighted scores for remediation prioritization.
+
+    weighted_total = sum(confidence_score for each finding)
+    A repo with 100 low-confidence findings (score 0.2 each = 20.0) is
+    lower priority than one with 10 high-confidence findings (0.9 each = 9.0)
+    when normalized by count.
+    """
+    try:
+        from detect_secrets.plugins.confidence import get_contextual_confidence
+    except ImportError:
+        return {'error': 'confidence module not available'}
+
+    weighted_total = 0.0
+    by_type_weighted: Dict[str, float] = {}
+
+    for secret in secrets:
+        secret_type = secret['type']
+        filename = secret.get('filename', '')
+        score = get_contextual_confidence(secret_type, filename)
+        weighted_total += score
+        by_type_weighted[secret_type] = by_type_weighted.get(secret_type, 0.0) + score
+
+    total = len(secrets)
+    return {
+        'weighted_total': round(weighted_total, 2),
+        'weighted_mean': round(weighted_total / total, 3) if total > 0 else 0.0,
+        'by_type_weighted': {k: round(v, 2) for k, v in
+                            sorted(by_type_weighted.items(), key=lambda x: -x[1])},
+    }
 
 
 def _compute_contextual_confidence_tiers(
@@ -280,6 +321,17 @@ def format_report(stats: Dict[str, Any]) -> str:
             lines.append('  Examples:')
             for ex in impact['examples']:
                 lines.append(f'    {ex["type"]} in {ex["filename"]}: {ex["base_tier"]} -> {ex["contextual_tier"]} ({ex["base_score"]} -> {ex["contextual_score"]})')
+
+    # Weighted priority scores
+    weighted = stats.get('weighted_scores', {})
+    if weighted and 'error' not in weighted:
+        lines.append('\n--- Confidence-Weighted Priority ---')
+        lines.append(f'  Weighted total: {weighted["weighted_total"]} (sum of confidence scores)')
+        lines.append(f'  Weighted mean:  {weighted["weighted_mean"]} (avg confidence per finding)')
+        if weighted.get('by_type_weighted'):
+            lines.append('  By type (weighted):')
+            for stype, wscore in list(weighted['by_type_weighted'].items())[:5]:
+                lines.append(f'    {stype}: {wscore}')
 
     # By type
     lines.append('\n--- Secrets by Type ---')
