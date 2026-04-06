@@ -1,0 +1,48 @@
+# This file contains ONLY false positives - nothing here is a real secret.
+# Used to verify the scanner doesn't have excessive false positive rates.
+
+# Hex color codes
+primary_color = "#AABBCC"
+secondary = "#FF0000"
+background = "#1a1a2e"
+text_color = "#E0E0E0"
+accent_color = "#4ECDC4"
+
+# UUIDs (v4)
+user_id = "550e8400-e29b-41d4-a716-446655440000"
+transaction_id = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+correlation_id = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+device_id = "123e4567-e89b-12d3-a456-426614174000"
+session_uuid = "c73bcdcc-2669-4bf6-81d3-e4ae73fb11fd"
+
+# Git SHAs
+latest_commit = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+merge_base = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+parent_sha = "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3"
+
+# Timestamps and numbers
+created_at = 1710000000
+build_number = 20240315
+pi_approx = 3.14159265358979323846
+
+# Common test/example values
+example_key = "test-key-not-real"
+placeholder = "<INSERT_YOUR_KEY>"
+template_var = "${API_KEY}"
+default_pass = "changeme"
+
+# Package checksums (SHA-256 integrity hashes)
+integrity = "sha256-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx="
+sha256sum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+# MAC addresses
+server_mac = "00:1A:2B:3C:4D:5E"
+gateway_mac = "AA:BB:CC:DD:EE:FF"
+
+# IP addresses (private ranges)
+server_ip = "192.168.1.100"
+gateway = "10.0.0.1"
+
+# Version strings
+api_version = "v2.1.0"
+schema_version = "1.0.0-beta.3"

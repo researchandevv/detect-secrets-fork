@@ -1,0 +1,39 @@
+{
+  "app": {
+    "name": "invoice-service",
+    "version": "3.2.1",
+    "port": 3000
+  },
+  "aws": {
+    "accessKeyId": "AKIAIOSFODNN7EXAMP02",
+    "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYzzzKEY12345",
+    "region": "us-west-2"
+  },
+  "database": {
+    "host": "db.internal.prod.io",
+    "port": 5432,
+    "name": "invoices",
+    "user": "invoice_svc",
+    "password": "Db!Pr0d#2024$ecure"
+  },
+  "redis": {
+    "url": "redis://default:CacheP@ss2024@redis.internal.io:6380/0"
+  },
+  "auth": {
+    "github_token": "ghp_zZyYxXwWvVuUtTsSrRqQpPoOnNmMlLkKjJ01",
+    "jwt_secret": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiYWRtaW4iLCJyb2xlIjoic3VwZXIiLCJpYXQiOjE3MTAwMDAwMDB9.K4dGMn6f7v8Jx2L0pA3bT9cR1eQ5iYkWmUhSzXnBvCs"
+  },
+  "notifications": {
+    "slack_token": "xoxb-999888777666-5554443332221-AaBbCcDdEeFfGgHhIiJjKkLl",
+    "slack_channel": "#alerts-production"
+  },
+  "stripe": {
+    "secret_key": "sk_live_ABCDEFGHIJklmnopqrstuvwx",
+    "webhook_secret": "whsec_test12345"
+  },
+  "monitoring": {
+    "sentry_dsn": "https://abc123@o123456.ingest.sentry.io/1234567",
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "request_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}

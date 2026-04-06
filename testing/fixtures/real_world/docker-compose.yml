@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://webapp:W3bApp$ecret@postgres:5432/production
+      - REDIS_URL=redis://default:R3d1sP@ssw0rd@redis:6379/0
+      - AWS_ACCESS_KEY_ID=AKIAI44QH8DHBEXAMP03
+      - AWS_SECRET_ACCESS_KEY="nE7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY"
+      - GITHUB_TOKEN=ghp_mMlLkKjJiIhHgGfFeEdDcCbBaA0987654321
+      - STRIPE_SECRET_KEY=sk_live_mnopqrstuvwxABCDEFGHIJKL
+      - SENDGRID_API_KEY=SG.MNOPQRSTUVWXYZ0123456.abcdefghijklmnopqrstuvwxyz01234567890abcdef
+      - SLACK_TOKEN=xoxp-111222333444-555666777888-999000111222-aabbccddeeff00112233445566778899
+      - JWT_SECRET=super_secret_jwt_key_do_not_share
+      - ANTHROPIC_API_KEY=sk-ant-api03-XYZABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijk
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_PASSWORD=W3bApp$ecret
+      - POSTGRES_USER=webapp
+      - POSTGRES_DB=production
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass R3d1sP@ssw0rd
+    ports:
+      - "6379:6379"
+
+  worker:
+    build: .
+    command: celery -A tasks worker
+    environment:
+      - CELERY_BROKER_URL=redis://default:R3d1sP@ssw0rd@redis:6379/1
+      - AWS_ACCESS_KEY_ID=AKIAI44QH8DHBEXAMP03
+      - AWS_SECRET_ACCESS_KEY="nE7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY"
+      - CF_API_TOKEN=aabbccdd11223344556677889900aabb11223344
+    depends_on:
+      - redis
+
+volumes:
+  pgdata:
+
+# Non-secret values
+# Build args and labels are not secrets
+# Image tags, port numbers, volume names are configuration

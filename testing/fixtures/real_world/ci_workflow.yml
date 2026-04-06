@@ -1,0 +1,39 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_ACCESS_KEY_ID: AKIAI44QH8DHBEXAMP07
+  AWS_SECRET_ACCESS_KEY: "CiCdSecretKey01234567890abcdefghijklmn"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS
+        env:
+          AWS_REGION: us-east-1
+        run: |
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+
+      - name: Deploy
+        env:
+          DEPLOY_TOKEN: ghp_CiCdDeployTokenAaBbCcDdEeFfGgHhIiJj01
+          SLACK_WEBHOOK: "https://hooks.slack.com/services/T0EXAMPLE/B0EXAMPLE/1234567890abcdefghijklmn"
+          NPM_TOKEN: npm_CiCdRegistryTokenAbCdEfGhIjKlMnOpQr
+          STRIPE_KEY: sk_live_CiCdStripeKeyABCDEFGHIJKL
+        run: |
+          npm publish --token $NPM_TOKEN
+          curl -X POST $SLACK_WEBHOOK -d '{"text":"Deployed v${{ github.sha }}"}'
+
+  # Non-secret configuration
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm run lint
